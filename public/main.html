@@ -142,7 +142,7 @@
       
       try {
         // Используем API URL с Render
-        const response = await fetch('https://ort-ai-chat-backend.onrender.com/api/status');
+        const response = await fetch('https://okuumai.onrender.com/api/status');
         
         // Добавляем обработку текстового ответа
         const text = await response.text();
@@ -200,7 +200,7 @@
       
       try {
         // Отправляем запрос на сервер Render
-        const response = await fetch('https://ort-ai-chat-backend.onrender.com/api/chat', {
+        const response = await fetch('https://okuumai.onrender.com/api/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
