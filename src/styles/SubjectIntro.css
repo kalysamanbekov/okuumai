@@ -1,0 +1,80 @@
+.subject-intro {
+  width: 100%;
+  padding: 20px 0px;
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.subject-intro .subject-content {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0px 15px;
+}
+
+.subject-intro .subject-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 15px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.subject-intro .subject-avatar svg {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.3s ease;
+}
+
+.subject-intro:hover .subject-avatar svg {
+  transform: scale(1.1);
+}
+
+.subject-intro .subject-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--color-text);
+}
+
+.subject-intro .subject-description {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--color-text);
+  opacity: 0.8;
+}
+
+/* Добавляем адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .subject-intro {
+    padding: 15px 0px;
+  }
+  
+  .subject-intro .subject-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+  
+  .subject-intro .subject-title {
+    font-size: 16px;
+  }
+  
+  .subject-intro .subject-description {
+    font-size: 14px;
+  }
+}

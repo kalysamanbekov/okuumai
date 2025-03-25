@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест подключения к Render бэкенду</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .message { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .user { background-color: #e1f5fe; text-align: right; }
+        .assistant { background-color: #f5f5f5; }
+        #messages { margin-top: 20px; }
+        textarea { width: 100%; height: 80px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background-color: #2196F3; color: white; border: none; cursor: pointer; }
+        #loading { display: none; color: #777; }
+        pre { white-space: pre-wrap; word-break: break-all; }
+        #logs { margin-top: 20px; height: 200px; overflow-y: auto; background-color: #f9f9f9; padding: 10px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Тест API Render</h1>
+    <div>
+        <textarea id="messageInput" placeholder="Введите сообщение..."></textarea>
+        <button id="sendButton">Отправить</button>
+        <span id="loading">Отправка...</span>
+    </div>
+    <div id="messages"></div>
+    
+    <h3>Логи:</h3>
+    <div id="logs"></div>
+
+    <script>
+        const messagesContainer = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const loadingIndicator = document.getElementById('loading');
+        const logsContainer = document.getElementById('logs');
+        
+        // Функция для логирования
+        function log(message) {
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+        
+        // Добавление сообщения в чат
+        function addMessage(content, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(sender);
+            messageDiv.textContent = content;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Отправка сообщения на сервер
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            // Добавляем сообщение пользователя в чат
+            addMessage(message, 'user');
+            messageInput.value = '';
+            
+            // Показываем индикатор загрузки
+            loadingIndicator.style.display = 'inline';
+            sendButton.disabled = true;
+            
+            // Формируем сообщения для API
+            const apiMessages = Array.from(document.querySelectorAll('.message')).map(msg => ({
+                role: msg.classList.contains('user') ? 'user' : 'assistant',
+                content: msg.textContent
+            }));
+            
+            try {
+                // Используем Render бэкенд напрямую
+                const apiUrl = 'https://ort-ai-chat-backend.onrender.com/api/chat';
+                log(`Отправка запроса на: ${apiUrl}`);
+                log(`Содержимое: ${JSON.stringify({ messages: apiMessages })}`)
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: apiMessages })
+                });
+                
+                log(`Получен ответ со статусом: ${response.status}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log(`Ошибка: ${errorText}`);
+                    throw new Error(`Ошибка сервера: ${response.status} - ${errorText}`);
+                }
+                
+                const responseData = await response.json();
+                log(`Успешно получен ответ: ${JSON.stringify(responseData)}`);
+                
+                // Добавляем ответ в чат
+                if (responseData.choices && responseData.choices[0] && responseData.choices[0].message) {
+                    addMessage(responseData.choices[0].message.content, 'assistant');
+                } else {
+                    addMessage('Получен неожиданный формат ответа от сервера', 'assistant');
+                }
+            } catch (error) {
+                log(`Ошибка: ${error.message}`);
+                addMessage(`Ошибка: ${error.message}`, 'assistant');
+            } finally {
+                // Скрываем индикатор загрузки
+                loadingIndicator.style.display = 'none';
+                sendButton.disabled = false;
+            }
+        }
+        
+        // Обработчики событий
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Инициализация
+        log('Страница загружена');
+    </script>
+</body>
+</html>

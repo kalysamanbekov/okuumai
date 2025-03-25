@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OKUUM.AI Тест</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      background-color: #1e1e2e;
+      color: #cdd6f4;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+    h1 {
+      color: #cba6f7;
+    }
+    .test-area {
+      margin-top: 30px;
+      border: 1px solid #313244;
+      padding: 20px;
+      border-radius: 8px;
+      background-color: #181825;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #cba6f7;
+      color: #1e1e2e;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .test-btn {
+      background-color: #f38ba8;
+    }
+    .chat-btn {
+      background-color: #a6e3a1;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #313244;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      margin-top: 20px;
+    }
+    #message-input {
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border: 1px solid #313244;
+      background-color: #181825;
+      color: #cdd6f4;
+    }
+    .messages {
+      border: 1px solid #313244;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      background-color: #313244;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .message {
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+    }
+    .user {
+      background-color: #45475a;
+      color: #cdd6f4;
+      align-self: flex-end;
+    }
+    .assistant {
+      background-color: #585b70;
+      color: #cdd6f4;
+      align-self: flex-start;
+    }
+    .status {
+      margin-top: 10px;
+      color: #f38ba8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>OKUUM.AI - Тестовая страница</h1>
+    <p>Это чистый HTML-файл без React для проверки API и диагностики проблем.</p>
+    <p>Время загрузки: <span id="time"></span></p>
+
+    <div class="test-area">
+      <h2>Диагностика API</h2>
+      <div class="button-group">
+        <button onclick="testServer()" class="test-btn">Проверить статус сервера</button>
+        <button onclick="testChatAPI()" class="test-btn">Проверить тестовый чат-API</button>
+      </div>
+      <div id="result">Результат теста появится здесь...</div>
+    </div>
+
+    <div class="test-area">
+      <h2>Тестовый чат</h2>
+      <div class="chat-container">
+        <textarea id="message-input" placeholder="Введите сообщение..."></textarea>
+        <div class="button-group">
+          <button onclick="sendMessage()" class="chat-btn">Отправить</button>
+        </div>
+        <div class="status" id="status"></div>
+        <div class="messages" id="messages"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Обновляем время
+    document.getElementById('time').textContent = new Date().toLocaleTimeString();
+    
+    // Проверка статуса сервера
+    async function testServer() {
+      const resultElement = document.getElementById('result');
+      resultElement.textContent = 'Проверка статуса сервера...';
+      
+      try {
+        // Используем полный URL для обхода потенциальных проблем с CORS
+        const response = await fetch(window.location.origin + '/api/status');
+        
+        // Добавляем обработку текстового ответа
+        const text = await response.text();
+        
+        try {
+          // Пытаемся парсить как JSON
+          const data = JSON.parse(text);
+          resultElement.textContent = `Статус сервера: 
+${JSON.stringify(data, null, 2)}`;
+        } catch (jsonError) {
+          // Если не JSON, показываем как текст
+          resultElement.textContent = `Ответ сервера (не JSON): ${text}`;
+          console.error('Ошибка парсинга JSON:', jsonError);
+        }
+      } catch (error) {
+        resultElement.textContent = `Ошибка: ${error.message}`;
+        console.error('Ошибка при проверке статуса:', error);
+      }
+    }
+    
+    // Проверка тестового API чата
+    async function testChatAPI() {
+      const resultElement = document.getElementById('result');
+      resultElement.textContent = 'Проверка тестового чат-API...';
+      
+      try {
+        const response = await fetch(window.location.origin + '/api/test-chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            messages: [{
+              role: 'user',
+              content: 'Тестовое сообщение'
+            }]
+          })
+        });
+        
+        // Сначала получаем текстовый ответ
+        const text = await response.text();
+        console.log('Сырой ответ API:', text);
+        
+        try {
+          // Пытаемся парсить как JSON
+          const data = JSON.parse(text);
+          resultElement.textContent = `Ответ тестового чат-API: 
+${JSON.stringify(data, null, 2)}`;
+        } catch (jsonError) {
+          // Если не JSON, показываем как текст
+          resultElement.textContent = `Ответ сервера (не JSON): ${text}`;
+          console.error('Ошибка парсинга JSON:', jsonError);
+        }
+      } catch (error) {
+        resultElement.textContent = `Ошибка: ${error.message}`;
+        console.error('Ошибка при проверке чат-API:', error);
+      }
+    }
+    
+    // Отправка сообщения в чат
+    const messages = [];
+    
+    async function sendMessage() {
+      const messageInput = document.getElementById('message-input');
+      const messagesContainer = document.getElementById('messages');
+      const statusElement = document.getElementById('status');
+      const messageContent = messageInput.value.trim();
+      
+      if (!messageContent) return;
+      
+      // Добавляем сообщение пользователя в интерфейс
+      const userMessageElement = document.createElement('div');
+      userMessageElement.className = 'message user';
+      userMessageElement.textContent = messageContent;
+      messagesContainer.appendChild(userMessageElement);
+      
+      // Сохраняем сообщение в истории
+      messages.push({
+        role: 'user',
+        content: messageContent
+      });
+      
+      // Очищаем поле ввода
+      messageInput.value = '';
+      
+      // Отображаем статус загрузки
+      statusElement.textContent = 'Отправка запроса...';
+      
+      try {
+        // Отправляем запрос на сервер
+        const response = await fetch(window.location.origin + '/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            messages: messages
+          })
+        });
+        
+        // Получаем сначала текстовый ответ для диагностики
+        const text = await response.text();
+        console.log('Сырой ответ API (chat):', text);
+        
+        if (!response.ok) {
+          throw new Error(`Ошибка сервера: ${response.status}, текст: ${text}`);
+        }
+        
+        // Пытаемся парсить как JSON
+        let data;
+        try {
+          data = JSON.parse(text);
+          console.log('Получен ответ (парсинг):', data);
+        } catch (jsonError) {
+          console.error('Ошибка парсинга JSON:', jsonError);
+          statusElement.textContent = 'Ошибка: Неверный формат ответа';
+          return;
+        }
+        
+        // Обрабатываем различные форматы ответа
+        let assistantMessage;
+        if (data.message && typeof data.message.content === 'string') {
+          assistantMessage = data.message.content;
+        } else if (data.choices && data.choices[0] && data.choices[0].message && typeof data.choices[0].message.content === 'string') {
+          assistantMessage = data.choices[0].message.content;
+        } else if (data.content && typeof data.content === 'string') {
+          // Еще один возможный формат
+          assistantMessage = data.content;
+        } else if (data.text && typeof data.text === 'string') {
+          // Еще один возможный формат
+          assistantMessage = data.text;
+        } else if (typeof data === 'string') {
+          // Если сам ответ - строка
+          assistantMessage = data;
+        } else {
+          console.error('Неверный формат ответа:', data);
+          statusElement.textContent = 'Ошибка: Неизвестный формат ответа';
+          return;
+        }
+        
+        // Проверяем, что ответ получен и не пустой
+        if (!assistantMessage || assistantMessage.trim() === '') {
+          console.warn('Получен пустой ответ от сервера');
+          assistantMessage = 'Извините, произошла ошибка. Пожалуйста, попробуйте еще раз.';
+        }
+
+        // Сохраняем ответ в истории
+        messages.push({
+          role: 'assistant',
+          content: assistantMessage
+        });
+        
+        // Добавляем ответ в интерфейс с поддержкой переносов строк
+        const assistantMessageElement = document.createElement('div');
+        assistantMessageElement.className = 'message assistant';
+        // Заменяем переносы строк на HTML-теги <br>
+        const formattedMessage = assistantMessage.split('\n').join('<br>');
+        assistantMessageElement.innerHTML = formattedMessage;
+        messagesContainer.appendChild(assistantMessageElement);
+        
+        // Очищаем статус
+        statusElement.textContent = '';
+        
+        // Прокручиваем чат вниз
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Делаем фокус на поле ввода для удобства пользователя
+        document.getElementById('message-input').focus();
+        
+      } catch (error) {
+        statusElement.textContent = `Ошибка: ${error.message}`;
+        console.error('Ошибка при отправке сообщения:', error);
+      }
+    }
+    
+    // Обработка нажатия Enter в поле ввода
+    document.getElementById('message-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>

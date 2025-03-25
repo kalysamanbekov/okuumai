@@ -1,0 +1,59 @@
+:root {
+  /* Светлая тема */
+  --color-background: #ffffff;
+  --color-header-bg: #f9f9f9;
+  --color-text: #202123;
+  --color-border: #e5e7eb;
+  --color-primary: #19C37D;
+  --color-secondary: #EA723D;
+  --color-input-bg: #f9f9f9;
+  --color-input-border: #d1d5db;
+  --color-user-message-bg: #e9f5ff;
+  --color-assistant-message-bg: #f5f5f5;
+  --shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Темная тема */
+.dark-theme {
+  --color-background: #1a1b26;
+  --color-header-bg: #24283b;
+  --color-text: #c9d1d9;
+  --color-border: #30363d;
+  --color-primary: #10b981;
+  --color-secondary: #f97316;
+  --color-input-bg: #24283b;
+  --color-input-border: #30363d;
+  --color-user-message-bg: #023e8a;
+  --color-assistant-message-bg: #24283b;
+  --shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', 'Roboto', sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  transition: all 0.3s ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+input, textarea, button {
+  transition: all 0.3s ease;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button:active {
+  transform: translateY(1px);
+}

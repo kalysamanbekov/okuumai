@@ -1,0 +1,14 @@
+services:
+  # Полное Node.js приложение (и API и фронтенд)
+  - type: web
+    name: okuumai
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PORT
+        value: 3008
+      - key: CORS_ORIGIN
+        value: https://okuumai.onrender.com

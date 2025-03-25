@@ -1,0 +1,23 @@
+nano /Users/kalysamanbekov/CascadeProjects/ort-ai-chat/Dockerfile
+# Удалите эту строку
+COPY .env ./.env
+git add Dockerfile
+git commit -m "Remove .env dependency from Dockerfile"
+git
+
+WORKDIR /app
+
+# Копируем только файлы, необходимые для сервера
+COPY server.js ./
+COPY prompt.js ./
+COPY server.package.json ./package.json
+COPY .env ./.env
+
+# Устанавливаем зависимости
+RUN npm install
+
+# Сервер будет работать на порту 3008
+EXPOSE 3008
+
+# Запуск сервера
+CMD ["node", "server.js"]

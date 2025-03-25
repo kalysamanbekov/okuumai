@@ -1,0 +1,473 @@
+import React, { useState, useContext } from 'react';
+import SubjectIntro from './components/SubjectIntro';
+import ThemeToggle from './components/ThemeToggle';
+import { ThemeContext } from './contexts/ThemeContext';
+import { getChatCompletion, formatMessagesForAPI } from './services/openaiService';
+import './styles/App.css';
+
+const ChatMessage = ({ sender, text }) => {
+  const isAi = sender === 'ai';
+  const messageContainerStyle = {
+    width: '100%',
+    padding: '20px 0',
+    backgroundColor: isAi ? '#444654' : 'transparent',
+    display: 'flex',
+    justifyContent: 'center',
+    borderBottom: '1px solid rgba(32,33,35,0.2)'
+  };
+  
+  const messageContentStyle = {
+    maxWidth: '800px',
+    width: '100%',
+    display: 'flex',
+    padding: '0 15px'
+  };
+  
+  const avatarStyle = {
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    backgroundColor: isAi ? '#EA723D' : '#19C37D',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    marginRight: '15px',
+    flexShrink: 0
+  };
+  
+  const textStyle = {
+    fontSize: '16px',
+    lineHeight: '1.5',
+    whiteSpace: 'pre-wrap'
+  };
+  
+  return (
+    <div style={messageContainerStyle}>
+      <div style={messageContentStyle}>
+        <div style={avatarStyle}>
+          {isAi ? 'O' : 'U'}
+        </div>
+        <div style={textStyle}>
+          {text}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const App = () => {
+  // Основной state
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState([
+    { id: 1, sender: 'ai', text: 'Привет! Я AI-тренажер для подготовки к ОРТ. Чем я могу тебе помочь?', isIntro: true }
+  ]);
+  
+  // Состояние для меню
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedSubject, setSelectedSubject] = useState('all');
+  
+  // Список предметов ОРТ
+  const subjects = [
+    { id: 'all', name: 'Пробное тестирование', color: '#EA723D' },
+    { id: 'math1', name: 'Математика 1', color: '#19C37D' },
+    { id: 'math2', name: 'Математика 2', color: '#4397FA' },
+    { id: 'analogies', name: 'Аналогии и дополнения', color: '#9467FF' },
+    { id: 'reading', name: 'Чтение и понимание', color: '#FAB005' }
+  ];
+  
+  // Функция для получения цвета предмета
+  const getSubjectColor = (subjectId) => {
+    const subject = subjects.find(s => s.id === subjectId);
+    return subject ? subject.color : '#EA723D';
+  };
+  
+  // Функции для работы с OpenAI API импортированы из openaiService.js в начале файла
+  
+  // Обработка отправки сообщения
+  const handleSendMessage = async () => {
+    if (input.trim() === '') return;
+    
+    // Добавляем сообщение пользователя
+    const userMessage = {
+      id: Date.now(),
+      sender: 'user',
+      text: input
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    
+    try {
+      console.log('Отправка запроса к OpenAI API...');
+
+      // Формируем системное сообщение
+      const systemMessage = {
+        role: 'system',
+        content: `Ты являешься экспертом по собакам и дрессировке. Ты знаешь всё о разных породах собак, их особенностях, характере, воспитании, здоровье и уходе. Ты даешь развернутые, полезные ответы и практические советы владельцам собак. Включай в ответы интересные факты о собаках. Твоя роль - помочь людям лучше понять своих питомцев и наладить с ними связь.`
+      };
+      
+      // Формируем массив сообщений для API
+      const apiMessages = formatMessagesForAPI(
+        messages.filter(msg => !msg.isLoading) // Исключаем сообщения загрузки
+      );
+      
+      // Добавляем системное сообщение в начало массива сообщений
+      const messagesForAPI = [
+        systemMessage,
+        ...apiMessages
+      ];
+      
+      // ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ: показываем все сообщения для отладки
+      console.log('===== ОТЛАДКА СООБЩЕНИЙ =====');
+      messagesForAPI.forEach((msg, index) => {
+        console.log(`Сообщение ${index} (${msg.role}): ${msg.content.substring(0, 50)}...`);
+      });
+      console.log('============================');
+      
+      // Подробное логирование перед отправкой в API
+      console.log('Отправляемые сообщения в API:', JSON.stringify(messagesForAPI, null, 2));
+      
+      // Используем обновленную функцию из сервиса
+      console.log('Вызов getChatCompletion с', messagesForAPI.length, 'сообщениями');
+      
+      try {
+        // Отправляем запрос в OpenAI API
+        console.log('Отправка запроса в API с', messagesForAPI.length, 'сообщениями');
+        
+        const responseText = await getChatCompletion(messagesForAPI);
+        console.log('Ответ получен от API:', responseText ? responseText.substring(0, 50) + '...' : 'Пустой ответ');
+        
+        if (!responseText) {
+          throw new Error('Получен пустой ответ от API');
+        }
+        
+        // Обновляем состояние интерфейса
+        console.log('Обновление интерфейса с новым ответом:', responseText.substring(0, 30) + '...');
+        
+        // Добавляем ответ в список сообщений
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          sender: 'ai',
+          text: responseText
+        }]);
+        
+        // Дополнительная проверка, что ответ был добавлен в список сообщений
+        setTimeout(() => {
+          console.log('Текущие сообщения после обновления:', messages.length);
+        }, 500);
+        
+      } catch (apiError) {
+        console.error('Ошибка при обращении к API:', apiError);
+        throw apiError; // Передаем ошибку выше для обработки
+      }
+      
+    } catch (error) {
+      console.error('Ошибка в handleSendMessage:', error.message, error.stack);
+      
+      // Добавляем сообщение об ошибке в список сообщений
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        sender: 'ai',
+        text: `Извините, произошла ошибка: ${error.message}`
+      }]);
+    }
+  };
+
+  // Обработчик Enter для отправки сообщения
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
+    }
+  };
+
+  // Получаем текущую тему из контекста
+  const { theme } = useContext(ThemeContext);
+
+  // Стили для компонентов с поддержкой темы
+  const appContainerStyle = {
+    display: 'flex',
+    fontFamily: 'Söhne, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+    height: '100vh',
+    width: '100%',
+    margin: '0 auto',
+    backgroundColor: 'var(--color-background)',
+    color: 'var(--color-text)'
+  };
+  
+  const sidebarStyle = {
+    width: isSidebarOpen ? '260px' : '50px',
+    backgroundColor: 'var(--color-sidebar-bg)',
+    color: 'var(--color-text)',
+    padding: '15px',
+    transition: 'all 0.3s ease',
+    overflowX: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    borderRight: '1px solid var(--color-border)'
+  };
+  
+  const sidebarHeaderStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '15px',
+    borderBottom: '1px solid var(--color-border)',
+    paddingBottom: '10px'
+  };
+  
+  const toggleButtonStyle = {
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--color-text)',
+    fontSize: '18px',
+    cursor: 'pointer'
+  };
+  
+  const subjectItemStyle = (isSelected) => ({
+    padding: '10px 12px',
+    cursor: 'pointer',
+    borderRadius: '5px',
+    marginBottom: '2px',
+    backgroundColor: isSelected ? 'var(--color-primary)' : 'transparent',
+    transition: 'all 0.2s ease',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    fontSize: '14px',
+    color: isSelected ? 'var(--color-button-text)' : 'var(--color-text)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  });
+  
+  const mainContentStyle = {
+    flex: 1,
+    padding: '0',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    backgroundColor: 'var(--color-background)'
+  };
+  
+  const headerStyle = {
+    color: 'var(--color-text)',
+    margin: '0 0 15px 0',
+    fontSize: '20px',
+    fontWeight: '500'
+  };
+  
+  const chatContainerStyle = {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: 'var(--color-background)',
+    overflow: 'hidden'
+  };
+  
+  const messagesAreaStyle = {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px'
+  };
+  
+  const inputAreaStyle = {
+    display: 'flex',
+    padding: '15px 20px 25px',
+    backgroundColor: 'var(--color-background)',
+    borderTop: '1px solid var(--color-border)',
+    position: 'relative'
+  };
+  
+  const inputStyle = {
+    flex: 1,
+    padding: '15px',
+    borderRadius: '8px',
+    border: '1px solid var(--color-input-border)',
+    fontSize: '14px',
+    backgroundColor: 'var(--color-input-bg)',
+    color: 'var(--color-text)',
+    boxShadow: 'var(--shadow)'
+  };
+  
+  const buttonStyle = {
+    padding: '10px',
+    backgroundColor: 'var(--color-primary)',
+    color: 'var(--color-button-text)',
+    border: 'none',
+    borderRadius: '6px',
+    marginLeft: '10px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    transition: 'all 0.2s ease',
+    width: '40px',
+    height: '40px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center'
+  };
+
+  // Обработчик выбора предмета
+  const handleSubjectSelect = (subjectId) => {
+    setSelectedSubject(subjectId);
+    
+    // Новое приветственное сообщение при выборе предмета
+    const subject = subjects.find(s => s.id === subjectId);
+    if (subject && subject.id !== 'all') {
+      setMessages([
+        { 
+          id: Date.now(), 
+          sender: 'ai', 
+          text: `Вы выбрали предмет "${subject.name}". Задавайте вопросы по этому предмету, и я постараюсь помочь вам подготовиться к ОРТ.`,
+          isIntro: true 
+        }
+      ]);
+    } else if (subject && subject.id === 'all') {
+      setMessages([
+        { 
+          id: Date.now(), 
+          sender: 'ai', 
+          text: `Привет! Я AI-тренажер для подготовки к ОРТ. Чем я могу тебе помочь?`,
+          isIntro: true 
+        }
+      ]);
+    }
+  };
+
+  return (
+    <div style={appContainerStyle}>
+      {/* Кнопка переключения темы */}
+      <ThemeToggle />
+      {/* Боковое меню */}
+      <div style={sidebarStyle}>
+        <div style={sidebarHeaderStyle}>
+          {isSidebarOpen && (
+            <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+              <img 
+                src="/images/okuumai-logo.svg" 
+                alt="OkuumAI Logo" 
+                style={{width: '40px', height: '40px', marginBottom: '10px'}} 
+              />
+              <h3 style={{margin: 0, fontSize: '14px', fontWeight: 'normal'}}>Предметы ОРТ</h3>
+            </div>
+          )}
+          <button 
+            style={toggleButtonStyle} 
+            onClick={() => setSidebarOpen(!isSidebarOpen)}
+          >
+            {isSidebarOpen ? '←' : '→'}
+          </button>
+        </div>
+        
+        {subjects.map(subject => (
+          <div 
+            key={subject.id} 
+            style={{
+              ...subjectItemStyle(selectedSubject === subject.id),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+              cursor: 'pointer',
+              opacity: isSidebarOpen ? 1 : 0.85
+            }}
+            onClick={() => handleSubjectSelect(subject.id)}
+          >
+            {isSidebarOpen ? (
+              <>
+                <div style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '3px',
+                  backgroundColor: subject.color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '10px',
+                  fontSize: '12px',
+                  color: '#fff',
+                  fontWeight: 'bold'
+                }}>
+                  {subject.name.charAt(0)}
+                </div>
+                <span>{subject.name}</span>
+              </>
+            ) : (
+              <div style={{
+                width: '18px',
+                height: '18px',
+                borderRadius: '3px',
+                backgroundColor: subject.color,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                color: '#fff',
+                fontWeight: 'bold'
+              }}>
+                {subject.name.charAt(0)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      
+      {/* Основной контент */}
+      <div style={mainContentStyle}>
+        <div style={{marginBottom: '15px', textAlign: 'center'}}>
+          <h1 style={{...headerStyle, fontSize: '24px'}}>OKUUM.AI</h1>
+        </div>
+        
+        <div style={chatContainerStyle}>
+          <div style={messagesAreaStyle}>
+            {messages.map(msg => (
+              msg.isIntro ? (
+                <SubjectIntro 
+                  key={msg.id}
+                  selectedSubject={subjects.find(s => s.id === selectedSubject)?.name || 'Пробное тестирование ОРТ'}
+                />
+              ) : (
+                <ChatMessage 
+                  key={msg.id} 
+                  sender={msg.sender} 
+                  text={msg.text} 
+                />
+              )
+            ))}
+          </div>
+          
+          <div style={inputAreaStyle}>
+            <input
+              type='text'
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder='Введите ваш вопрос...'
+              style={inputStyle}
+            />
+            <button 
+              onClick={handleSendMessage}
+              style={buttonStyle}
+              aria-label="Отправить"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 2L11 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <p style={{ marginTop: '10px', fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
+          OKUUM.AI &copy; {new Date().getFullYear()}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default App;

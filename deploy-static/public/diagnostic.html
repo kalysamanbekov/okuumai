@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OKUUM.AI API Diagnostic</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1e1e2e;
+      color: #ffffff;
+    }
+    .card {
+      background-color: #2d2d3f;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    button {
+      background-color: #f6734b;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    pre {
+      background-color: #1a1a27;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    h1, h2 {
+      color: #f6734b;
+    }
+    .success {
+      color: #4caf50;
+    }
+    .error {
+      color: #f44336;
+    }
+  </style>
+</head>
+<body>
+  <h1>OKUUM.AI API Diagnostic</h1>
+  
+  <div class="card">
+    <h2>1. Проверка сервера</h2>
+    <button id="checkServer">Проверить статус сервера</button>
+    <pre id="serverResult">Результаты будут здесь...</pre>
+  </div>
+
+  <div class="card">
+    <h2>2. Проверка API ключа</h2>
+    <button id="checkApiKey">Проверить API ключ</button>
+    <pre id="apiKeyResult">Результаты будут здесь...</pre>
+  </div>
+
+  <div class="card">
+    <h2>3. Тестовое сообщение в чате</h2>
+    <button id="testChat">Отправить тестовое сообщение</button>
+    <pre id="chatResult">Результаты будут здесь...</pre>
+  </div>
+
+  <div class="card">
+    <h2>4. Сетевые запросы</h2>
+    <pre id="networkLogs">Логи сетевых запросов будут здесь...</pre>
+  </div>
+
+  <script>
+    // Функция для отображения результатов с форматированием
+    function displayResult(elementId, data, isError = false) {
+      const element = document.getElementById(elementId);
+      if (isError) {
+        element.innerHTML = `<span class="error">❌ ОШИБКА:</span> ${JSON.stringify(data, null, 2)}`;
+      } else {
+        element.innerHTML = `<span class="success">✅ УСПЕХ:</span> ${JSON.stringify(data, null, 2)}`;
+      }
+    }
+
+    // Функция для логирования сетевых запросов
+    function logNetwork(message) {
+      const logs = document.getElementById('networkLogs');
+      const timestamp = new Date().toLocaleTimeString();
+      logs.innerHTML += `[${timestamp}] ${message}\n`;
+    }
+
+    // Функция для выполнения запроса с логированием
+    async function fetchWithLogging(url, options = {}) {
+      logNetwork(`Запрос: ${options.method || 'GET'} ${url}`);
+      try {
+        const response = await fetch(url, options);
+        const status = response.status;
+        logNetwork(`Ответ: ${status} ${response.statusText}`);
+        
+        const data = await response.json();
+        logNetwork(`Данные: ${JSON.stringify(data).substring(0, 100)}...`);
+        
+        if (!response.ok) {
+          throw { status, data };
+        }
+        
+        return data;
+      } catch (error) {
+        logNetwork(`Ошибка: ${JSON.stringify(error)}`);
+        throw error;
+      }
+    }
+
+    // 1. Проверка статуса сервера
+    document.getElementById('checkServer').addEventListener('click', async () => {
+      try {
+        const data = await fetchWithLogging('/api/status');
+        displayResult('serverResult', data);
+      } catch (error) {
+        displayResult('serverResult', error, true);
+      }
+    });
+
+    // 2. Добавим тестовый эндпоинт для проверки API ключа
+    document.getElementById('checkApiKey').addEventListener('click', async () => {
+      try {
+        const data = await fetchWithLogging('/api/test-openai');
+        displayResult('apiKeyResult', data);
+      } catch (error) {
+        displayResult('apiKeyResult', error, true);
+      }
+    });
+
+    // 3. Тест чата с простым сообщением
+    document.getElementById('testChat').addEventListener('click', async () => {
+      try {
+        const data = await fetchWithLogging('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [
+              { role: "user", content: "Привет, это тестовое сообщение!" }
+            ]
+          })
+        });
+        displayResult('chatResult', data);
+      } catch (error) {
+        displayResult('chatResult', error, true);
+      }
+    });
+  </script>
+</body>
+</html>

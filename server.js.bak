@@ -1,0 +1,343 @@
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+require('dotenv').config();
+const OpenAI = require('openai');
+
+const app = express();
+const PORT = 3008;
+
+// Инициализация клиента OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.REACT_APP_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+});
+
+// Функция для улучшенного логирования
+const logWithTimestamp = (message) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${message}`);
+};
+
+// Логирование инициализации
+logWithTimestamp(`Инициализация сервера, порт: ${PORT}`);
+logWithTimestamp(`API Key определен: ${!!process.env.REACT_APP_OPENAI_API_KEY || !!process.env.OPENAI_API_KEY}`);
+
+// Middleware
+app.use(cors({
+  origin: '*', // Разрешаем запросы с любых источников для отладки
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '50mb' })); // Увеличиваем лимит для больших запросов
+app.use(express.static('public'));
+
+// Middleware для логирования всех запросов
+app.use((req, res, next) => {
+  logWithTimestamp(`Получен запрос: ${req.method} ${req.url}`);
+  if (req.url === '/api/chat') {
+    logWithTimestamp('=========== ЗАПРОС ЧАТА ПОЛУЧЕН ===========');
+    logWithTimestamp(`Origin: ${req.headers.origin || 'Неизвестно'}`);
+    logWithTimestamp(`Content-Type: ${req.headers['content-type'] || 'Неизвестно'}`);
+    if (req.body && req.body.messages) {
+      logWithTimestamp(`Количество сообщений: ${req.body.messages.length}`);
+    }
+    logWithTimestamp('===========================================');
+  }
+  next();
+});
+
+// Прокси эндпоинт для OpenAI API
+app.post('/api/chat', async (req, res) => {
+  try {
+    console.log('====== PROXY SERVER RECEIVED REQUEST ======');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
+    const apiKey = process.env.REACT_APP_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      console.error('Ошибка: API ключ не найден в переменных окружения');
+      return res.status(500).json({ 
+        error: 'API key is not configured on the server' 
+      });
+    }
+    
+    console.log('API Key found (first 5 chars):', apiKey.substring(0, 5) + '...');
+    
+    // Проверяем, что тело запроса содержит необходимые поля
+    if (!req.body.messages || !Array.isArray(req.body.messages) || req.body.messages.length === 0) {
+      console.error('Ошибка: в запросе отсутствуют сообщения');
+      return res.status(400).json({
+        error: 'В запросе отсутствуют сообщения'
+      });
+    }
+    
+    // ВАЖНОЕ ИСПРАВЛЕНИЕ: Принудительно заменяем системное сообщение,
+    // чтобы устранить проблему с кэшированием на клиенте
+    for (let i = 0; i < req.body.messages.length; i++) {
+      if (req.body.messages[i].role === 'system') {
+        // Заменяем системное сообщение на новое о собаках
+        req.body.messages[i].content = `Ты являешься экспертом по собакам и дрессировке. Ты знаешь всё о разных породах собак, их особенностях, характере, воспитании, здоровье и уходе. Ты даешь развернутые, полезные ответы и практические советы владельцам собак. Включай в ответы интересные факты о собаках. Твоя роль - помочь людям лучше понять своих питомцев и наладить с ними связь.`;
+        console.log('СИСТЕМНОЕ СООБЩЕНИЕ ПРИНУДИТЕЛЬНО ЗАМЕНЕНО НА СЕРВЕРЕ!');
+        break;
+      }
+    }
+    
+    // Убедимся, что у нас есть модель
+    const model = req.body.model || 'gpt-3.5-turbo';
+    console.log('Используемая модель:', model);
+    
+    // Выводим все сообщения для отладки
+    console.log('Сообщения для отправки:');
+    req.body.messages.forEach((msg, i) => {
+      console.log(`[${i}] ${msg.role}: ${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}`);
+    });
+    
+    // Настраиваем заголовки для OpenAI API
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    };
+    
+    try {
+      console.log('Отправка запроса в OpenAI API...');
+      
+      // УЛУЧШЕННАЯ ОБРАБОТКА СООБЩЕНИЙ ДЛЯ МАКСИМАЛЬНОГО СОХРАНЕНИЯ КОНТЕКСТА
+      console.log('Применяем улучшенную обработку сообщений для сохранения контекста');
+      const optimizedMessages = [];
+      
+      // Добавляем системное сообщение, если оно есть
+      const systemMessage = req.body.messages.find(msg => msg.role === 'system');
+      if (systemMessage) {
+        optimizedMessages.push(systemMessage);
+      }
+      
+      // НАХОДИМ ПОСЛЕДНИЕ N СООБЩЕНИЙ ДЛЯ СОХРАНЕНИЯ КОНТЕКСТА
+      // Фильтруем сообщения, убирая системные сообщения, так как мы уже добавили их
+      const nonSystemMessages = req.body.messages.filter(msg => msg.role !== 'system');
+      
+      // МАКСИМАЛЬНОЕ КОЛ-ВО СООБЩЕНИЙ ДЛЯ СОХРАНЕНИЯ КОНТЕКСТА
+      const MAX_CONTEXT_MESSAGES = 10;
+      
+      // Берем последние N сообщений (или все, если их меньше)
+      const lastMessages = nonSystemMessages.slice(-MAX_CONTEXT_MESSAGES);
+      
+      // Добавляем все последние сообщения без разрыва цепочки
+      // Это гарантирует, что мы сохраним всю цепочку диалога
+      optimizedMessages.push(...lastMessages);
+      
+      // Убеждаемся, что последнее сообщение от пользователя
+      // Если последнее сообщение от ассистента, пропускаем его, так как нам нужен ответ на сообщение пользователя
+      if (lastMessages.length > 0 && lastMessages[lastMessages.length - 1].role === 'assistant') {
+        console.log('Последнее сообщение от ассистента, ожидаем сообщение от пользователя');
+        // Проверяем, есть ли предыдущее сообщение от пользователя
+        for (let i = lastMessages.length - 2; i >= 0; i--) {
+          if (lastMessages[i].role === 'user') {
+            // Форсированно добавляем сообщение пользователя, если его нет в конце
+            optimizedMessages.push({
+              role: 'user',
+              content: 'Пожалуйста, ответь на моё последнее сообщение о болеющей собаке'
+            });
+            break;
+          }
+        }
+      }
+      
+      console.log('Оптимизированные сообщения для отправки:');
+      optimizedMessages.forEach((msg, i) => {
+        console.log(`[${i}] ${msg.role}: ${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}`);
+      });
+      
+      const openaiRequestBody = {
+        model: model,
+        messages: optimizedMessages, // Используем оптимизированные сообщения
+        temperature: req.body.temperature || 0.75, // Оптимальная температура для баланса креативности и фактической точности
+        max_tokens: req.body.max_tokens || 2000, // Увеличиваем максимальную длину ответа для более подробных ответов
+        presence_penalty: 0.1, // Слегка поощряем новые темы
+        frequency_penalty: 0.6 // Значительно снижаем вероятность повторений
+      };
+      
+      // Отправляем запрос в OpenAI API
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        openaiRequestBody,
+        { headers }
+      );
+      
+      console.log('Ответ получен от OpenAI API:');
+      console.log('Статус:', response.status);
+      
+      if (response.data && response.data.choices && response.data.choices.length > 0) {
+        const messageContent = response.data.choices[0].message.content;
+        console.log('======= ПОЛНЫЙ ТЕКСТ ОТВЕТА =======');
+        console.log(messageContent);
+        console.log('=============================================');
+      }
+      
+      // Возвращаем ответ клиенту
+      return res.json(response.data);
+      
+    } catch (apiError) {
+      console.error('Ошибка при обращении к OpenAI API:');
+      console.error('Статус:', apiError.response?.status);
+      console.error('Сообщение об ошибке:', apiError.message);
+      
+      if (apiError.response?.data) {
+        console.error('Детали ошибки:', JSON.stringify(apiError.response.data, null, 2));
+      }
+      
+      return res.status(apiError.response?.status || 500).json({
+        error: apiError.response?.data || {
+          message: apiError.message,
+          details: 'Ошибка при обращении к OpenAI API'
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in /api/chat:', error.message);
+    console.error('Error details:', error);
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+  }
+});
+
+// Для тестирования - отдаем информацию о сервере
+app.get('/api/status', (req, res) => {
+  res.json({ status: 'ok', message: 'Сервер работает нормально' });
+});
+
+// Serve static files from the React build
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static('build'));
+} else {
+  // Для разработки перенаправляем на React сервер
+  app.get('/', (req, res) => {
+    res.redirect('http://localhost:3000');
+  });
+}
+
+// Добавляем маршрут для тестирования API
+app.get('/test', (req, res) => {
+  res.json({ message: 'Сервер работает и готов к обработке запросов!' });
+});
+
+// Тестовый эндпоинт для проверки API ключа
+app.get('/api/test-openai', (req, res) => {
+  const apiKey = process.env.REACT_APP_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+  const assistantId = process.env.REACT_APP_ASSISTANT_ID || process.env.ASSISTANT_ID;
+  
+  res.json({
+    apiKeyExists: !!apiKey,
+    apiKeyType: apiKey ? (apiKey.startsWith('sk-') ? 'Valid format' : 'Invalid format') : 'No key',
+    apiKeyPrefix: apiKey ? apiKey.substring(0, 7) + '...' : 'No key',
+    assistantIdExists: !!assistantId,
+    serverTime: new Date().toISOString(),
+    nodeVersion: process.version,
+    openaiPackageVersion: require('openai/package.json').version
+  });
+});
+
+// Создание треда
+app.post('/api/threads', async (req, res) => {
+  try {
+    const thread = await openai.beta.threads.create();
+    console.log('Created new thread:', thread.id);
+    return res.json({ threadId: thread.id });
+  } catch (error) {
+    console.error('Error creating thread:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Добавление сообщения в тред
+app.post('/api/threads/:threadId/messages', async (req, res) => {
+  try {
+    const { threadId } = req.params;
+    const { content, subject } = req.body;
+    
+    console.log(`Adding message to thread ${threadId} for subject: ${subject}`);
+    console.log('Message content:', content);
+    
+    const message = await openai.beta.threads.messages.create(
+      threadId,
+      {
+        role: 'user',
+        content: content
+      }
+    );
+    
+    return res.json(message);
+  } catch (error) {
+    console.error('Error adding message:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Запуск треда
+app.post('/api/threads/:threadId/run', async (req, res) => {
+  try {
+    const { threadId } = req.params;
+    const { subject } = req.body;
+    
+    const ASSISTANT_ID = process.env.REACT_APP_ASSISTANT_ID || process.env.ASSISTANT_ID;
+    
+    if (!ASSISTANT_ID) {
+      return res.status(400).json({ error: 'Assistant ID is not configured' });
+    }
+    
+    console.log(`Running thread ${threadId} with assistant ${ASSISTANT_ID} for subject: ${subject}`);
+    
+    // Создаем бег с дополнительными инструкциями о предмете
+    const run = await openai.beta.threads.runs.create(
+      threadId,
+      { 
+        assistant_id: ASSISTANT_ID
+      }
+    );
+    
+    return res.json(run);
+  } catch (error) {
+    console.error('Error running thread:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Проверка статуса треда
+app.get('/api/threads/:threadId/runs/:runId', async (req, res) => {
+  try {
+    const { threadId, runId } = req.params;
+    
+    console.log(`Checking status of run ${runId} in thread ${threadId}`);
+    
+    const run = await openai.beta.threads.runs.retrieve(
+      threadId,
+      runId
+    );
+    
+    return res.json(run);
+  } catch (error) {
+    console.error('Error retrieving run status:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Получение сообщений треда
+app.get('/api/threads/:threadId/messages', async (req, res) => {
+  try {
+    const { threadId } = req.params;
+    
+    console.log(`Retrieving messages for thread ${threadId}`);
+    
+    const messages = await openai.beta.threads.messages.list(
+      threadId
+    );
+    
+    return res.json(messages);
+  } catch (error) {
+    console.error('Error retrieving messages:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Запуск сервера
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

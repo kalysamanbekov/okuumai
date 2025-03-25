@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKUUM.AI API Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #response {
+            margin-top: 20px;
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OKUUM.AI API Tester</h1>
+        
+        <div class="form-group">
+            <label for="subject">Предмет:</label>
+            <select id="subject">
+                <option value="Математика 1">Математика 1</option>
+                <option value="Математика 2">Математика 2</option>
+                <option value="Аналогии и дополнения">Аналогии и дополнения</option>
+                <option value="Чтение и понимание">Чтение и понимание</option>
+                <option value="Пробное тестирование">Пробное тестирование</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="message">Сообщение:</label>
+            <textarea id="message" rows="4" placeholder="Введите ваше сообщение..."></textarea>
+        </div>
+        
+        <button id="sendBtn">Отправить</button>
+        
+        <div id="loadingIndicator" class="loading" style="display: none;">
+            Обрабатывается запрос...
+        </div>
+        
+        <div class="form-group">
+            <label for="response">Ответ API:</label>
+            <div id="response">Здесь будет показан ответ от API</div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('sendBtn').addEventListener('click', async function() {
+            const subject = document.getElementById('subject').value;
+            const message = document.getElementById('message').value;
+            
+            if (!message.trim()) {
+                alert('Пожалуйста, введите сообщение');
+                return;
+            }
+            
+            // Показываем индикатор загрузки
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('response').textContent = 'Ожидание ответа...';
+            
+            try {
+                // Создаем новый тред или используем сохраненный
+                let threadId = localStorage.getItem('activeThreadId');
+                
+                if (!threadId) {
+                    const createThreadResponse = await fetch('/api/threads', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (!createThreadResponse.ok) {
+                        throw new Error('Не удалось создать тред');
+                    }
+                    
+                    const threadData = await createThreadResponse.json();
+                    threadId = threadData.threadId;
+                    localStorage.setItem('activeThreadId', threadId);
+                }
+                
+                // Добавляем сообщение пользователя в тред
+                const addMessageResponse = await fetch(`/api/threads/${threadId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: message,
+                        subject: subject
+                    })
+                });
+                
+                if (!addMessageResponse.ok) {
+                    throw new Error('Не удалось добавить сообщение');
+                }
+                
+                // Запускаем обработку треда ассистентом
+                const runResponse = await fetch(`/api/threads/${threadId}/run`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ subject: subject })
+                });
+                
+                if (!runResponse.ok) {
+                    throw new Error('Не удалось запустить ассистента');
+                }
+                
+                const runData = await runResponse.json();
+                const runId = runData.id;
+                
+                // Периодически проверяем статус выполнения
+                let status = 'in_progress';
+                
+                while (status !== 'completed' && status !== 'failed') {
+                    // Ждем 1 секунду между проверками
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    const statusResponse = await fetch(`/api/threads/${threadId}/runs/${runId}`);
+                    
+                    if (!statusResponse.ok) {
+                        throw new Error('Не удалось получить статус выполнения');
+                    }
+                    
+                    const statusData = await statusResponse.json();
+                    status = statusData.status;
+                }
+                
+                if (status === 'failed') {
+                    throw new Error('Выполнение не удалось');
+                }
+                
+                // Получаем сообщения треда
+                const messagesResponse = await fetch(`/api/threads/${threadId}/messages`);
+                
+                if (!messagesResponse.ok) {
+                    throw new Error('Не удалось получить сообщения');
+                }
+                
+                const messagesData = await messagesResponse.json();
+                const assistantMessages = messagesData.data.filter(msg => msg.role === 'assistant');
+                
+                if (assistantMessages.length === 0) {
+                    throw new Error('Не получено ответа от ассистента');
+                }
+                
+                // Показываем последнее сообщение ассистента
+                const latestMessage = assistantMessages[0];
+                document.getElementById('response').textContent = latestMessage.content[0].text.value;
+                
+            } catch (error) {
+                console.error('Ошибка:', error);
+                document.getElementById('response').textContent = `Ошибка: ${error.message}`;
+            } finally {
+                // Скрываем индикатор загрузки
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

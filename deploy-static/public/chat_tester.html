@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKUUM.AI Chat Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #response {
+            margin-top: 20px;
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .chat-history {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+        .user-message {
+            background-color: #e2f7df;
+            text-align: right;
+        }
+        .assistant-message {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OKUUM.AI Chat Tester</h1>
+        
+        <div class="form-group">
+            <label for="subject">u041fu0440u0435u0434u043cu0435u0442:</label>
+            <select id="subject">
+                <option value="u041cu0430u0442u0435u043cu0430u0442u0438u043au0430 1">u041cu0430u0442u0435u043cu0430u0442u0438u043au0430 1</option>
+                <option value="u041cu0430u0442u0435u043cu0430u0442u0438u043au0430 2">u041cu0430u0442u0435u043cu0430u0442u0438u043au0430 2</option>
+                <option value="u0410u043du0430u043bu043eu0433u0438u0438 u0438 u0434u043eu043fu043eu043bu043du0435u043du0438u044f">u0410u043du0430u043bu043eu0433u0438u0438 u0438 u0434u043eu043fu043eu043bu043du0435u043du0438u044f</option>
+                <option value="u0427u0442u0435u043du0438u0435 u0438 u043fu043eu043du0438u043cu0430u043du0438u0435">u0427u0442u0435u043du0438u0435 u0438 u043fu043eu043du0438u043cu0430u043du0438u0435</option>
+                <option value="u041fu0440u043eu0431u043du043eu0435 u0442u0435u0441u0442u0438u0440u043eu0432u0430u043du0438u0435">u041fu0440u043eu0431u043du043eu0435 u0442u0435u0441u0442u0438u0440u043eu0432u0430u043du0438u0435</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="message">u0421u043eu043eu0431u0449u0435u043du0438u0435:</label>
+            <textarea id="message" rows="4" placeholder="u0412u0432u0435u0434u0438u0442u0435 u0432u0430u0448u0435 u0441u043eu043eu0431u0449u0435u043du0438u0435..."></textarea>
+        </div>
+        
+        <button id="sendBtn">u041eu0442u043fu0440u0430u0432u0438u0442u044c</button>
+        
+        <div id="loadingIndicator" class="loading" style="display: none;">
+            u041eu0431u0440u0430u0431u0430u0442u044bu0432u0430u0435u0442u0441u044f u0437u0430u043fu0440u043eu0441...
+        </div>
+        
+        <div class="chat-history" id="chatHistory">
+            <h3>u0418u0441u0442u043eu0440u0438u044f u0447u0430u0442u0430:</h3>
+            <!-- u0417u0434u0435u0441u044c u0431u0443u0434u0435u0442 u043eu0442u043eu0431u0440u0430u0436u0430u0442u044cu0441u044f u0438u0441u0442u043eu0440u0438u044f u0441u043eu043eu0431u0449u0435u043du0438u0439 -->
+        </div>
+    </div>
+
+    <script>
+        // u0425u0440u0430u043du0438u043c u0438u0441u0442u043eu0440u0438u044e u0441u043eu043eu0431u0449u0435u043du0438u0439
+        let messages = [];
+        
+        // u0417u0430u0433u0440u0443u0436u0430u0435u043c u0438u0441u0442u043eu0440u0438u044e u0438u0437 localStorage, u0435u0441u043bu0438 u043eu043du0430 u0435u0441u0442u044c
+        const savedMessages = localStorage.getItem('chatMessages');
+        if (savedMessages) {
+            messages = JSON.parse(savedMessages);
+            renderChatHistory();
+        }
+        
+        document.getElementById('sendBtn').addEventListener('click', async function() {
+            const subject = document.getElementById('subject').value;
+            const userMessage = document.getElementById('message').value;
+            
+            if (!userMessage.trim()) {
+                alert('u041fu043eu0436u0430u043bu0443u0439u0441u0442u0430, u0432u0432u0435u0434u0438u0442u0435 u0441u043eu043eu0431u0449u0435u043du0438u0435');
+                return;
+            }
+            
+            // u041fu043eu043au0430u0437u044bu0432u0430u0435u043c u0438u043du0434u0438u043au0430u0442u043eu0440 u0437u0430u0433u0440u0443u0437u043au0438
+            document.getElementById('loadingIndicator').style.display = 'block';
+            
+            try {
+                // u0414u043eu0431u0430u0432u043bu044fu0435u043c u0441u043eu043eu0431u0449u0435u043du0438u0435 u043fu043eu043bu044cu0437u043eu0432u0430u0442u0435u043bu044f u0432 u0438u0441u0442u043eu0440u0438u044e
+                messages.push({ role: 'user', content: userMessage });
+                
+                // u0414u043eu0431u0430u0432u043bu044fu0435u043c u0441u0438u0441u0442u0435u043cu043du044bu0439 u043fu0440u043eu043cu043fu0442 u0441 u0438u043du0444u043eu0440u043cu0430u0446u0438u0435u0439 u043e u043fu0440u0435u0434u043cu0435u0442u0435
+                const systemMessage = { role: 'system', content: `u041fu0440u0435u0434u043cu0435u0442: ${subject}` };
+                
+                // u0424u043eu0440u043cu0438u0440u0443u0435u043c u0437u0430u043fu0440u043eu0441 u043a API
+                const messagesForAPI = [systemMessage, ...messages];
+                
+                // u0421u043eu0437u0434u0430u0435u043c u043du043eu0432u044bu0439 u0442u0440u0435u0434 u0438u043bu0438 u0438u0441u043fu043eu043bu044cu0437u0443u0435u043c u0441u0443u0449u0435u0441u0442u0432u0443u044eu0449u0438u0439
+                let threadId = localStorage.getItem('activeThreadId');
+                
+                if (!threadId) {
+                    console.log('Creating new thread...');
+                    const createThreadResponse = await fetch('/api/threads', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (!createThreadResponse.ok) {
+                        throw new Error(`u041du0435 u0443u0434u0430u043bu043eu0441u044c u0441u043eu0437u0434u0430u0442u044c u0442u0440u0435u0434: ${createThreadResponse.status}`);
+                    }
+                    
+                    const threadData = await createThreadResponse.json();
+                    threadId = threadData.threadId;
+                    localStorage.setItem('activeThreadId', threadId);
+                    console.log(`Created new thread: ${threadId}`);
+                }
+                
+                // u0414u043eu0431u0430u0432u043bu044fu0435u043c u0441u043eu043eu0431u0449u0435u043du0438u0435 u0432 u0442u0440u0435u0434
+                console.log(`Adding message to thread ${threadId}`);
+                const addMessageResponse = await fetch(`/api/threads/${threadId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: userMessage,
+                        subject: subject
+                    })
+                });
+                
+                if (!addMessageResponse.ok) {
+                    throw new Error(`u041du0435 u0443u0434u0430u043bu043eu0441u044c u0434u043eu0431u0430u0432u0438u0442u044c u0441u043eu043eu0431u0449u0435u043du0438u0435: ${addMessageResponse.status}`);
+                }
+                
+                // u0417u0430u043fu0443u0441u043au0430u0435u043c u0430u0441u0441u0438u0441u0442u0435u043du0442u0430
+                console.log(`Running thread ${threadId} with subject: ${subject}`);
+                const runResponse = await fetch(`/api/threads/${threadId}/run`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        subject: subject
+                    })
+                });
+                
+                if (!runResponse.ok) {
+                    throw new Error(`u041du0435 u0443u0434u0430u043bu043eu0441u044c u0437u0430u043fu0443u0441u0442u0438u0442u044c u0430u0441u0441u0438u0441u0442u0435u043du0442u0430: ${runResponse.status}`);
+                }
+                
+                const runData = await runResponse.json();
+                const runId = runData.id;
+                console.log(`Run created with ID: ${runId}`);
+                
+                // u041fu0440u043eu0432u0435u0440u044fu0435u043c u0441u0442u0430u0442u0443u0441 u0432u044bu043fu043eu043bu043du0435u043du0438u044f
+                let status = 'in_progress';
+                let attempts = 0;
+                const maxAttempts = 30; // u041cu0430u043au0441u0438u043cu0430u043bu044cu043du043eu0435 u043au043eu043bu0438u0447u0435u0441u0442u0432u043e u043fu043eu043fu044bu0442u043eu043a (30 u0441u0435u043au0443u043du0434)
+                
+                while (status !== 'completed' && status !== 'failed' && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // u0416u0434u0435u043c 1 u0441u0435u043au0443u043du0434u0443
+                    attempts++;
+                    
+                    const statusResponse = await fetch(`/api/threads/${threadId}/runs/${runId}`);
+                    
+                    if (!statusResponse.ok) {
+                        throw new Error(`u041du0435 u0443u0434u0430u043bu043eu0441u044c u043fu043eu043bu0443u0447u0438u0442u044c u0441u0442u0430u0442u0443u0441: ${statusResponse.status}`);
+                    }
+                    
+                    const statusData = await statusResponse.json();
+                    status = statusData.status;
+                    console.log(`Run status: ${status} (attempt ${attempts})`);
+                }
+                
+                if (attempts >= maxAttempts) {
+                    throw new Error(`u041fu0440u0435u0432u044bu0448u0435u043du043e u0432u0440u0435u043cu044f u043eu0436u0438u0434u0430u043du0438u044f u043eu0442u0432u0435u0442u0430 (30 u0441u0435u043au0443u043du0434)`);
+                }
+                
+                if (status === 'failed') {
+                    throw new Error(`u0412u044bu043fu043eu043bu043du0435u043du0438u0435 u043du0435 u0443u0434u0430u043bu043eu0441u044c: ${JSON.stringify(statusData)}`);
+                }
+                
+                // u041fu043eu043bu0443u0447u0430u0435u043c u0441u043eu043eu0431u0449u0435u043du0438u044f u0438u0437 u0442u0440u0435u0434u0430
+                console.log(`Retrieving messages from thread ${threadId}`);
+                const messagesResponse = await fetch(`/api/threads/${threadId}/messages`);
+                
+                if (!messagesResponse.ok) {
+                    throw new Error(`u041du0435 u0443u0434u0430u043bu043eu0441u044c u043fu043eu043bu0443u0447u0438u0442u044c u0441u043eu043eu0431u0449u0435u043du0438u044f: ${messagesResponse.status}`);
+                }
+                
+                const messagesData = await messagesResponse.json();
+                const assistantMessages = messagesData.data.filter(msg => msg.role === 'assistant');
+                
+                if (assistantMessages.length === 0) {
+                    throw new Error('u041du0435 u043fu043eu043bu0443u0447u0435u043du043e u043eu0442u0432u0435u0442u0430 u043eu0442 u0430u0441u0441u0438u0441u0442u0435u043du0442u0430');
+                }
+                
+                // u0411u0435u0440u0435u043c u043fu043eu0441u043bu0435u0434u043du0435u0435 u0441u043eu043eu0431u0449u0435u043du0438u0435 u0430u0441u0441u0438u0441u0442u0435u043du0442u0430
+                const latestMessage = assistantMessages[0];
+                const assistantMessage = latestMessage.content[0].text.value;
+                
+                // u0414u043eu0431u0430u0432u043bu044fu0435u043c u043eu0442u0432u0435u0442 u0430u0441u0441u0438u0441u0442u0435u043du0442u0430 u0432 u0438u0441u0442u043eu0440u0438u044e
+                messages.push({ role: 'assistant', content: assistantMessage });
+                
+                // u0421u043eu0445u0440u0430u043du044fu0435u043c u0438u0441u0442u043eu0440u0438u044e u0432 localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(messages));
+                
+                // u041eu0431u043du043eu0432u043bu044fu0435u043c u043eu0442u043eu0431u0440u0430u0436u0435u043du0438u0435 u0438u0441u0442u043eu0440u0438u0438 u0447u0430u0442u0430
+                renderChatHistory();
+                
+                // u041eu0447u0438u0449u0430u0435u043c u043fu043eu043bu0435 u0432u0432u043eu0434u0430
+                document.getElementById('message').value = '';
+                
+            } catch (error) {
+                console.error('u041eu0448u0438u0431u043au0430:', error);
+                alert(`u041fu0440u043eu0438u0437u043eu0448u043bu0430 u043eu0448u0438u0431u043au0430: ${error.message}`);
+            } finally {
+                // u0421u043au0440u044bu0432u0430u0435u043c u0438u043du0434u0438u043au0430u0442u043eu0440 u0437u0430u0433u0440u0443u0437u043au0438
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        });
+        
+        // u0424u0443u043du043au0446u0438u044f u0434u043bu044f u043eu0442u043eu0431u0440u0430u0436u0435u043du0438u044f u0438u0441u0442u043eu0440u0438u0438 u0447u0430u0442u0430
+        function renderChatHistory() {
+            const chatHistory = document.getElementById('chatHistory');
+            
+            // u041eu0447u0438u0449u0430u0435u043c u0442u0435u043au0443u0449u0443u044e u0438u0441u0442u043eu0440u0438u044e, u043eu0441u0442u0430u0432u043bu044fu044f u0437u0430u0433u043eu043bu043eu0432u043eu043a
+            chatHistory.innerHTML = '<h3>u0418u0441u0442u043eu0440u0438u044f u0447u0430u0442u0430:</h3>';
+            
+            // u0414u043eu0431u0430u0432u043bu044fu0435u043c u0441u043eu043eu0431u0449u0435u043du0438u044f u0432 u0438u0441u0442u043eu0440u0438u044e
+            messages.filter(msg => msg.role !== 'system').forEach(msg => {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${msg.role === 'user' ? 'user-message' : 'assistant-message'}`;
+                messageElement.textContent = msg.content;
+                chatHistory.appendChild(messageElement);
+            });
+            
+            // u041fu0440u043eu043au0440u0443u0447u0438u0432u0430u0435u043c u0438u0441u0442u043eu0440u0438u044e u0432u043du0438u0437
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+    </script>
+</body>
+</html>
