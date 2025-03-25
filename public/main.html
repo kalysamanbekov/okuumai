@@ -117,13 +117,9 @@
       </div>
     </div>
 
-    <div class="card">
-      <h2>Системная информация</h2>
-      <div class="button-group">
-        <button onclick="testServer()" class="action-btn">Статус сервера</button>
-        <button onclick="clearMessages()" class="action-btn">Очистить историю</button>
-      </div>
-      <div id="result">Информация появится здесь...</div>
+    <!-- Кнопка очистки истории перемещена в блок чата -->
+    <div class="button-group" style="margin-top: 15px;">
+      <button onclick="clearMessages()" class="action-btn">Очистить историю</button>
     </div>
   </div>
 
@@ -135,38 +131,12 @@
     updateTime();
     setInterval(updateTime, 1000);
     
-    // Проверка статуса сервера
-    async function testServer() {
-      const resultElement = document.getElementById('result');
-      resultElement.textContent = 'Проверка статуса сервера...';
-      
-      try {
-        // Используем API URL с Render
-        const response = await fetch('https://okuumai.onrender.com/api/status');
-        
-        // Добавляем обработку текстового ответа
-        const text = await response.text();
-        
-        try {
-          // Пытаемся парсить как JSON
-          const data = JSON.parse(text);
-          resultElement.textContent = `Статус сервера: \n${JSON.stringify(data, null, 2)}`;
-        } catch (jsonError) {
-          // Если не JSON, показываем как текст
-          resultElement.textContent = `Ответ сервера (не JSON): ${text}`;
-          console.error('Ошибка парсинга JSON:', jsonError);
-        }
-      } catch (error) {
-        resultElement.textContent = `Ошибка: ${error.message}`;
-        console.error('Ошибка при проверке статуса:', error);
-      }
-    }
     
     // Очистка истории сообщений
     function clearMessages() {
       messages.length = 0;
       document.getElementById('messages').innerHTML = '';
-      document.getElementById('result').textContent = 'История сообщений очищена';
+      alert('История сообщений очищена');
     }
     
     // Отправка сообщения в чат
