@@ -5,7 +5,15 @@ const initAuth = () => {
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
       // Пользователь не аутентифицирован, перенаправляем на страницу входа
-      window.location.href = '/public/login.html';
+      // Выбираем правильный путь в зависимости от окружения
+      let loginPath;
+      if (window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')) {
+        loginPath = '/public/login.html';
+      } else {
+        loginPath = '/login.html';
+      }
+      console.log(`Перенаправляем неавторизованного пользователя на: ${loginPath}`);
+      window.location.href = loginPath;
     } else {
       // Пользователь аутентифицирован, показываем содержимое страницы
       const pageContent = document.getElementById('page-content');
@@ -25,7 +33,15 @@ const initAuth = () => {
       if (logoutButton) {
         logoutButton.addEventListener('click', () => {
           auth.signOut().then(() => {
-            window.location.href = '/public/login.html';
+            // Выбираем правильный путь в зависимости от окружения
+            let loginPath;
+            if (window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')) {
+              loginPath = '/public/login.html';
+            } else {
+              loginPath = '/login.html';
+            }
+            console.log(`Перенаправляем после выхода на: ${loginPath}`);
+            window.location.href = loginPath;
           });
         });
       }

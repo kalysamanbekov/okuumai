@@ -281,7 +281,15 @@
       if (result.user) {
         // Успешный вход через Google
         createUserProfile(result.user).then(() => {
-          window.location.href = '/public/catalog.html';
+          // Выбираем правильный путь в зависимости от окружения
+          let redirectPath;
+          if (window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')) {
+            redirectPath = '/public/catalog.html';
+          } else {
+            redirectPath = '/catalog.html';
+          }
+          debugLog(`Перенаправляем после Google аутентификации на: ${redirectPath}`);
+          window.location.href = redirectPath;
         });
       }
     }).catch((error) => {
@@ -318,16 +326,32 @@
           if (result.error) {
             throw new Error(result.error.message);
           }
-          console.log('Пользователь успешно вошел в систему');
-          window.location.href = '/public/catalog.html';
+          debugLog('Пользователь успешно вошел в систему');
+          // Выбираем правильный путь в зависимости от окружения
+          let redirectPath;
+          if (window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')) {
+            redirectPath = '/public/catalog.html';
+          } else {
+            redirectPath = '/catalog.html';
+          }
+          debugLog(`Перенаправляем после входа на: ${redirectPath}`);
+          window.location.href = redirectPath;
         } else {
           // Регистрация пользователя
           const result = await registerWithEmailAndPassword(email, password);
           if (result.error) {
             throw new Error(result.error.message);
           }
-          console.log('Пользователь успешно зарегистрирован');
-          window.location.href = '/public/catalog.html';
+          debugLog('Пользователь успешно зарегистрирован');
+          // Выбираем правильный путь в зависимости от окружения
+          let redirectPath;
+          if (window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')) {
+            redirectPath = '/public/catalog.html';
+          } else {
+            redirectPath = '/catalog.html';
+          }
+          debugLog(`Перенаправляем после регистрации на: ${redirectPath}`);
+          window.location.href = redirectPath;
         }
       } catch (error) {
         console.error('Ошибка аутентификации:', error);
@@ -389,17 +413,53 @@
       }
     });
     
+    // Добавляем видимый элемент для отображения отладочной информации
+    const debugElement = document.createElement('div');
+    debugElement.style.position = 'fixed';
+    debugElement.style.top = '10px';
+    debugElement.style.right = '10px';
+    debugElement.style.backgroundColor = 'rgba(0,0,0,0.8)';
+    debugElement.style.color = 'white';
+    debugElement.style.padding = '10px';
+    debugElement.style.borderRadius = '5px';
+    debugElement.style.zIndex = '9999';
+    debugElement.style.maxWidth = '80%';
+    debugElement.style.maxHeight = '50%';
+    debugElement.style.overflow = 'auto';
+    debugElement.style.fontSize = '12px';
+    debugElement.style.fontFamily = 'monospace';
+    document.body.appendChild(debugElement);
+    
+    // Функция для логирования информации
+    function debugLog(message) {
+      console.log(message);
+      const logLine = document.createElement('div');
+      logLine.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+      debugElement.appendChild(logLine);
+    }
+    
     // Проверка состояния аутентификации
     auth.onAuthStateChanged((user) => {
       if (user) {
-        console.log('Пользователь аутентифицирован:', user);
+        debugLog(`Пользователь аутентифицирован: ${user.email}`);
         // Если пользователь аутентифицирован и мы на странице логина, перенаправляем на каталог
         if (window.location.pathname.includes('login.html')) {
-          console.log('Перенаправляем аутентифицированного пользователя на каталог');
-          window.location.href = '/catalog.html';
+          debugLog('Попытка перенаправления на каталог...');
+          
+          // Проверяем домен и выбираем правильный путь перенаправления
+          let redirectPath;
+          if (window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1')) {
+            redirectPath = '/public/catalog.html';
+          } else {
+            // На продакшн-сервере путь может быть другим
+            redirectPath = '/catalog.html';
+          }
+          
+          debugLog(`Перенаправляем на: ${redirectPath}`);
+          window.location.href = redirectPath;
         }
       } else {
-        console.log('Пользователь не аутентифицирован');
+        debugLog('Пользователь не аутентифицирован');
       }
     });
   </script>
