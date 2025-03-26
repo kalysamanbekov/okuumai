@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase';
-import ShadcnAuthForm from './components/ShadcnAuthForm';
 import ShadcnDemo from './components/ShadcnDemo';
 import RadixDemo from './components/RadixDemo';
+import RadixAuthForm from './components/RadixAuthForm';
 import './styles/App.css';
 import './styles/globals.css';
 import ThemeToggle from './components/ThemeToggle';
 import { ThemeProvider } from './contexts/ThemeContext';
-import TrialBanner from './components/TrialBanner';
+import RadixTrialBanner from './components/RadixTrialBanner';
 
 // Упрощенный компонент сообщения чата
 const ChatMessage = ({ sender, content }) => {
@@ -80,14 +80,13 @@ function App() {
         </header>
         
         {/* Показываем баннер триала, если пользователь авторизован */}
-        {user && <TrialBanner />}
+        {user && <RadixTrialBanner />}
         
         {/* Основное содержимое */}
         <main>
           {!user ? (
             <div className="container mx-auto p-6">
-              <h2 className="text-2xl font-bold text-center mb-6">Войдите в систему</h2>
-              <ShadcnAuthForm onAuthSuccess={handleAuthSuccess} />
+              <RadixAuthForm onAuthSuccess={handleAuthSuccess} />
             </div>
           ) : (
             <div>
