@@ -33,6 +33,17 @@ const DEMO_RESPONSES = [
 // Счетчик для циклического перебора демо-ответов
 let responseIndex = 0;
 
+// Карта соответствия material_id и assistant_id для OpenAI Assistants API
+const ASSISTANTS_MAP = {
+  'test_full': 'asst_abc123', // Тестовый ассистент для полного курса
+  'math': 'asst_def456', // Ассистент по математике
+  'logic': 'asst_ghi789', // Ассистент по логике
+  'physics': 'asst_jkl012', // Ассистент по физике
+  'chemistry': 'asst_mno345', // Ассистент по химии
+  'biology': 'asst_pqr678', // Ассистент по биологии
+  'history': 'asst_stu901' // Ассистент по истории
+};
+
 
 // Инициализация приложения Express
 const app = express();
