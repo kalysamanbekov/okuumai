@@ -13,4 +13,4 @@ services:
       - key: CORS_ORIGIN
         value: https://okuumai.onrender.com
       - key: ASSISTANT_ID
-        value: asst_uKuVLbdzuKS3kmKGf47qQVcF
+        value: asst_k4AUnwgcryTCBzX3W4EPH3ee
