@@ -281,7 +281,7 @@
       if (result.user) {
         // Успешный вход через Google
         createUserProfile(result.user).then(() => {
-          window.location.href = 'catalog.html';
+          window.location.href = '/public/catalog.html';
         });
       }
     }).catch((error) => {
@@ -319,7 +319,7 @@
             throw new Error(result.error.message);
           }
           console.log('Пользователь успешно вошел в систему');
-          window.location.href = 'catalog.html';
+          window.location.href = '/public/catalog.html';
         } else {
           // Регистрация пользователя
           const result = await registerWithEmailAndPassword(email, password);
@@ -327,7 +327,7 @@
             throw new Error(result.error.message);
           }
           console.log('Пользователь успешно зарегистрирован');
-          window.location.href = 'catalog.html';
+          window.location.href = '/public/catalog.html';
         }
       } catch (error) {
         console.error('Ошибка аутентификации:', error);

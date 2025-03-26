@@ -112,13 +112,16 @@ const createUserProfile = async (user) => {
   const userSnap = await getDoc(userRef);
   
   if (!userSnap.exists()) {
-    // Если пользователь новый, создаем запись
+    // Если пользователь новый, создаем запись с триалом
     const userData = {
       email: user.email,
       displayName: user.displayName || '',
       photoURL: user.photoURL || '',
       createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp()
+      lastLogin: serverTimestamp(),
+      trial_active: true,
+      trial_started_at: serverTimestamp(),
+      premium_access: false
     };
     
     await setDoc(userRef, userData);
@@ -146,6 +149,115 @@ const getUserData = async (userId) => {
   }
 };
 
+// Проверка статуса триала и обновление его если нужно
+const checkTrialStatus = async (userId) => {
+  try {
+    // Проверяем, есть ли данные в localStorage на случай офлайн-режима
+    const localTrialData = localStorage.getItem(`trial_${userId}`);
+    let localData = null;
+    
+    if (localTrialData) {
+      try {
+        localData = JSON.parse(localTrialData);
+        console.log('Используются локальные данные триала:', localData);
+      } catch (e) {
+        console.error('Ошибка при чтении локальных данных:', e);
+      }
+    }
+    
+    // Получаем данные пользователя из Firestore
+    const { userData, error } = await getUserData(userId);
+    
+    // Если есть ошибка при получении данных из Firestore, используем локальные данные
+    if (error) {
+      console.error('Ошибка при получении данных пользователя:', error);
+      
+      // Если есть локальные данные, используем их
+      if (localData) {
+        // Вычисляем оставшееся время на основе локальных данных
+        if (localData.trialActive) {
+          return { 
+            trialActive: true, 
+            timeLeft: localData.timeLeft || '23:59:59',
+            isPremium: false,
+            error: null 
+          };
+        } else {
+          return { trialActive: false, error: null };
+        }
+      }
+      
+      // Если нет ни данных из Firestore, ни локальных данных, создаем новый триал
+      const defaultTimeLeft = '23:59:59';
+      localStorage.setItem(`trial_${userId}`, JSON.stringify({
+        trialActive: true,
+        timeLeft: defaultTimeLeft,
+        trialStartedAt: new Date().toISOString()
+      }));
+      
+      return { 
+        trialActive: true, 
+        timeLeft: defaultTimeLeft,
+        isPremium: false,
+        error: null 
+      };
+    }
+    
+    // Если у пользователя есть премиум-доступ
+    if (userData.premium_access) {
+      return { trialActive: true, isPremium: true, error: null };
+    }
+    
+    // Если триал неактивен, возвращаем false
+    if (!userData.trial_active) {
+      return { trialActive: false, error: null };
+    }
+    
+    // Проверяем, прошло ли 24 часа с момента начала триала
+    const trialStartedAt = userData.trial_started_at.toDate();
+    const currentTime = new Date();
+    const trialDuration = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
+    
+    // Вычисляем разницу во времени
+    const timeDiff = currentTime - trialStartedAt;
+    
+    // Если прошло больше 24 часов, обновляем статус триала
+    if (timeDiff > trialDuration) {
+      // Обновляем статус триала в базе данных
+      const userRef = doc(db, "users", userId);
+      await updateDoc(userRef, {
+        trial_active: false
+      });
+      
+      return { trialActive: false, error: null };
+    }
+    
+    // Вычисляем оставшееся время триала
+    const timeLeft = trialDuration - timeDiff;
+    const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+    const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const secondsLeft = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    
+    // Форматируем оставшееся время
+    const formattedTimeLeft = `${hoursLeft.toString().padStart(2, '0')}:${minutesLeft.toString().padStart(2, '0')}:${secondsLeft.toString().padStart(2, '0')}`;
+    
+    // Сохраняем данные в localStorage для офлайн-режима
+    localStorage.setItem(`trial_${userId}`, JSON.stringify({
+      trialActive: true,
+      timeLeft: formattedTimeLeft,
+      trialStartedAt: trialStartedAt.toISOString()
+    }));
+    
+    return { 
+      trialActive: true, 
+      timeLeft: formattedTimeLeft,
+      error: null 
+    };
+  } catch (error) {
+    console.error('Ошибка при проверке статуса триала:', error);
+    return { trialActive: false, error };
+  }
+};
 
 
 // Загрузка скриншота об оплате
@@ -207,6 +319,7 @@ export {
   resetPassword,
   createUserProfile,
   getUserData,
+  checkTrialStatus,
   uploadPaymentScreenshot,
   submitPaymentInfo
 };

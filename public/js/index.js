@@ -49,5 +49,56 @@ const initApp = () => {
     });
 };
 
+// Функция для инициализации таймера отсчета времени триала
+const initTrialTimer = () => {
+  // Проверяем, есть ли элемент таймера на странице
+  const timerElement = document.getElementById('timer');
+  if (!timerElement) return;
+  
+  // Проверяем, есть ли в localStorage время начала триала
+  let trialStartTime = localStorage.getItem('trialStartTime');
+  
+  // Если нет, устанавливаем текущее время как время начала триала
+  if (!trialStartTime) {
+    trialStartTime = Date.now();
+    localStorage.setItem('trialStartTime', trialStartTime);
+  }
+  
+  // Функция для обновления таймера
+  function updateTimer() {
+    const currentTime = Date.now();
+    const trialStartTimeMs = parseInt(trialStartTime);
+    
+    // Время триала - 24 часа (86400000 мс)
+    const trialDuration = 86400000;
+    
+    // Вычисляем оставшееся время
+    let timeLeft = trialDuration - (currentTime - trialStartTimeMs);
+    
+    // Если время истекло, показываем 00:00:00
+    if (timeLeft <= 0) {
+      timerElement.textContent = '00:00:00';
+      return;
+    }
+    
+    // Преобразуем миллисекунды в часы, минуты и секунды
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    timeLeft %= (1000 * 60 * 60);
+    const minutes = Math.floor(timeLeft / (1000 * 60));
+    timeLeft %= (1000 * 60);
+    const seconds = Math.floor(timeLeft / 1000);
+    
+    // Форматируем время в виде HH:MM:SS
+    timerElement.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  
+  // Обновляем таймер каждую секунду
+  updateTimer();
+  setInterval(updateTimer, 1000);
+};
+
 // u0417u0430u043fu0443u0441u043a u043fu0440u0438u043bu043eu0436u0435u043du0438u044f u043fu043eu0441u043bu0435 u0437u0430u0433u0440u0443u0437u043au0438 u0441u0442u0440u0430u043du0438u0446u044b
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', () => {
+  initApp();
+  initTrialTimer();
+});

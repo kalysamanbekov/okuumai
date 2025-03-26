@@ -261,11 +261,11 @@
     .promo-banner {
       background: linear-gradient(135deg, #5e35b1, #3949ab);
       color: white;
-      padding: 20px;
+      padding: 15px;
       border-radius: 8px;
-      margin: 20px auto;
-      max-width: 900px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      margin: 15px auto 25px;
+      max-width: 700px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
     
     .promo-banner-content {
@@ -273,16 +273,16 @@
     }
     
     .promo-title {
-      font-size: 1.8rem;
+      font-size: 1.4rem;
       font-weight: bold;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       color: #ffffff;
     }
     
     .promo-text {
-      font-size: 1.1rem;
-      margin-bottom: 20px;
-      line-height: 1.5;
+      font-size: 0.95rem;
+      margin-bottom: 15px;
+      line-height: 1.4;
     }
     
     .promo-button {
@@ -302,14 +302,6 @@
   </style>
 </head>
 <body>
-  <!-- Баннер с ограниченным предложением -->
-  <div class="promo-banner">
-    <div class="promo-banner-content">
-      <h2 class="promo-title">Всего 24 часа!</h2>
-      <p class="promo-text">Попробуйте бесплатно ИИ-тренажёр для подготовки к ОРТ и увеличьте свои шансы на высокий балл.</p>
-      <a href="payment.html" class="promo-button">Продлить доступ</a>
-    </div>
-  </div>
 
   <!-- Скрипт для проверки аутентификации перенесен в отдельный модуль -->
   <script type="module" src="js/catalog-auth.js"></script>
@@ -328,7 +320,16 @@
   
   <div class="container">
     
-    <h1 class="page-title">Подготовка к ОРТ</h1>
+    <!-- Баннер с ограниченным предложением -->
+    <div class="promo-banner">
+      <div class="promo-banner-content">
+        <h2 class="promo-title">Ваш пробный доступ активен!</h2>
+        <p class="promo-text">У вас всего 24 часа, чтобы попробовать ИИ-тренажёр для подготовки к ОРТ.
+Используйте это время эффективно и улучшите свои результаты.
+Осталось времени: <span id="timer">23:59:59</span></p>
+        <a href="payment.html" class="promo-button">Продлить доступ</a>
+      </div>
+    </div>
     
     <!-- Секция тестирования -->
     <h2 class="section-title tests">Тестирования</h2>
