@@ -5,121 +5,281 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OKUUM.AI Чат</title>
   <style>
+    :root {
+      --primary-color: #10a37f;
+      --primary-hover: #0d8c6d;
+      --secondary-color: #5436da;
+      --text-primary: #202123;
+      --text-secondary: #6e6e80;
+      --bg-primary: #ffffff;
+      --bg-secondary: #f7f7f8;
+      --border-color: #e5e5e5;
+      --shadow-color: rgba(0, 0, 0, 0.05);
+      --error-color: #e53e3e;
+      --success-color: #10a37f;
+    }
+    
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
       margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      background-color: #1e1e2e;
-      color: #cdd6f4;
-    }
-    .container {
-      max-width: 800px;
-      width: 100%;
-    }
-    h1 {
-      color: #cba6f7;
-    }
-    .card {
-      margin-top: 30px;
-      border: 1px solid #313244;
-      padding: 20px;
-      border-radius: 8px;
-      background-color: #181825;
-    }
-    .button-group {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    button {
-      padding: 8px 16px;
-      background-color: #cba6f7;
-      color: #1e1e2e;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .action-btn {
-      background-color: #f38ba8;
-    }
-    .chat-btn {
-      background-color: #a6e3a1;
-    }
-    #result {
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #313244;
-      border-radius: 4px;
-      white-space: pre-wrap;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-    .chat-container {
+      padding: 0;
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+      height: 100vh;
       display: flex;
       flex-direction: column;
-      margin-top: 20px;
     }
-    #message-input {
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 4px;
-      border: 1px solid #313244;
-      background-color: #181825;
-      color: #cdd6f4;
+    
+    /* Header */
+    .header {
+      background-color: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
-    .messages {
-      border: 1px solid #313244;
-      padding: 10px;
-      border-radius: 4px;
-      margin-top: 10px;
-      background-color: #313244;
-      max-height: 300px;
+    
+    .logo {
+      font-weight: bold;
+      font-size: 20px;
+      color: var(--text-primary);
+    }
+    
+    /* Main Container */
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background-color: #202123;
+      color: white;
+      padding: 16px;
       overflow-y: auto;
     }
+    
+    .new-chat-btn {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      background: transparent;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      transition: background-color 0.3s;
+    }
+    
+    .new-chat-btn:hover {
+      background-color: rgba(255,255,255,0.1);
+    }
+    
+    /* Chat Container */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+    
+    /* Message Styling */
     .message {
-      padding: 8px;
-      margin-bottom: 8px;
-      border-radius: 4px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border-color);
     }
-    .user {
-      background-color: #45475a;
-      color: #cdd6f4;
-      align-self: flex-end;
+    
+    .message.user {
+      background-color: var(--bg-primary);
+      margin: 8px 0;
     }
-    .assistant {
-      background-color: #585b70;
-      color: #cdd6f4;
-      align-self: flex-start;
+    
+    .message.assistant {
+      background-color: var(--bg-secondary);
+      border-radius: 8px;
+      margin: 8px 0;
     }
+    
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      margin-right: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      flex-shrink: 0;
+    }
+    
+    .message-avatar.user {
+      background-color: var(--primary-color);
+    }
+    
+    .message-avatar:not(.user) {
+      background-color: var(--secondary-color);
+    }
+    
+    .message-content {
+      flex: 1;
+      line-height: 1.6;
+      font-size: 16px;
+      white-space: pre-wrap;
+    }
+    
+    /* Input Container */
+    .input-container {
+      border-top: 1px solid var(--border-color);
+      padding: 20px;
+      position: relative;
+      background-color: var(--bg-primary);
+    }
+    
+    .message-input-wrapper {
+      display: flex;
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background-color: var(--bg-primary);
+      box-shadow: 0 2px 6px var(--shadow-color);
+      align-items: center;
+    }
+    
+    #message-input {
+      flex: 1;
+      padding: 16px;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: inherit;
+      font-size: 16px;
+      line-height: 1.5;
+      max-height: 200px;
+      overflow-y: auto;
+      background-color: transparent;
+    }
+    
+    .send-button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      margin-right: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .send-button:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    .send-button:disabled {
+      background-color: var(--border-color);
+      cursor: not-allowed;
+    }
+    
     .status {
-      margin-top: 10px;
-      color: #f38ba8;
+      text-align: center;
+      padding: 10px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    
+    .action-buttons {
+      display: flex;
+      justify-content: center;
+      margin-top: 16px;
+      gap: 10px;
+    }
+    
+    .action-button {
+      padding: 8px 16px;
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .action-button:hover {
+      background-color: var(--border-color);
+    }
+    
+
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>OKUUM.AI</h1>
-    <p>Интеллектуальный AI ассистент. Время: <span id="time"></span></p>
+  <div class="header">
+    <div class="logo">
+      OKUUM.AI
+    </div>
+    <div>
+      <span id="time"></span>
+    </div>
+  </div>
 
-    <div class="card">
-      <h2>Чат с AI</h2>
-      <div class="chat-container">
-        <textarea id="message-input" placeholder="Введите сообщение..."></textarea>
-        <div class="button-group">
-          <button onclick="sendMessage()" class="chat-btn">Отправить</button>
-        </div>
-        <div class="status" id="status"></div>
-        <div class="messages" id="messages"></div>
-      </div>
+  <div class="main-container">
+    <div class="sidebar">
+      <button class="new-chat-btn">
+        <span>Новый чат</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
 
-    <!-- Кнопка очистки истории перемещена в блок чата -->
-    <div class="button-group" style="margin-top: 15px;">
-      <button onclick="clearMessages()" class="action-btn">Очистить историю</button>
+    <div class="chat-container">
+      <div class="messages-container" id="messages">
+        <!-- Сообщения будут добавляться здесь -->
+      </div>
+
+      <div class="input-container">
+        <div class="message-input-wrapper">
+          <textarea id="message-input" placeholder="Спросите что-нибудь..."></textarea>
+          <button onclick="sendMessage()" class="send-button" id="send-button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="status" id="status"></div>
+        <div class="action-buttons">
+          <button onclick="clearMessages()" class="action-button">Очистить историю</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -131,13 +291,18 @@
     updateTime();
     setInterval(updateTime, 1000);
     
-    
     // Очистка истории сообщений
     function clearMessages() {
       messages.length = 0;
       document.getElementById('messages').innerHTML = '';
-      alert('История сообщений очищена');
+      document.getElementById('status').innerHTML = '<span style="color: var(--success-color);">История сообщений очищена</span>';
+      setTimeout(() => {
+        document.getElementById('status').textContent = '';
+      }, 2000);
     }
+    
+    // Обработка кнопки "Новый чат"
+    document.querySelector('.new-chat-btn').addEventListener('click', clearMessages);
     
     // Отправка сообщения в чат
     const messages = [];
@@ -153,7 +318,22 @@
       // Добавляем сообщение пользователя в интерфейс
       const userMessageElement = document.createElement('div');
       userMessageElement.className = 'message user';
-      userMessageElement.textContent = messageContent;
+      
+      // Создаем аватар пользователя
+      const userAvatar = document.createElement('div');
+      userAvatar.className = 'message-avatar user';
+      userAvatar.textContent = 'Вы';
+      
+      // Создаем контейнер для текста сообщения
+      const userContent = document.createElement('div');
+      userContent.className = 'message-content';
+      userContent.textContent = messageContent;
+      
+      // Добавляем аватар и текст в сообщение
+      userMessageElement.appendChild(userAvatar);
+      userMessageElement.appendChild(userContent);
+      
+      // Добавляем сообщение в контейнер
       messagesContainer.appendChild(userMessageElement);
       
       // Сохраняем сообщение в истории
@@ -165,8 +345,24 @@
       // Очищаем поле ввода
       messageInput.value = '';
       
-      // Отображаем статус загрузки
-      statusElement.textContent = 'Отправка запроса...';
+      // Добавляем заглушку для ответа ассистента
+      const assistantPlaceholder = document.createElement('div');
+      assistantPlaceholder.className = 'message assistant';
+      
+      const assistantAvatar = document.createElement('div');
+      assistantAvatar.className = 'message-avatar';
+      assistantAvatar.textContent = 'AI';
+      
+      const assistantContent = document.createElement('div');
+      assistantContent.className = 'message-content g-text g-text_body-1';
+      assistantContent.innerHTML = '<div class="status">Ожидание ответа...</div>';
+      
+      assistantPlaceholder.appendChild(assistantAvatar);
+      assistantPlaceholder.appendChild(assistantContent);
+      messagesContainer.appendChild(assistantPlaceholder);
+      
+      // Прокручиваем вниз к последнему сообщению
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
       
       try {
         // Отправляем запрос на сервер Render
@@ -195,29 +391,26 @@
           console.log('Получен ответ (парсинг):', data);
         } catch (jsonError) {
           console.error('Ошибка парсинга JSON:', jsonError);
-          statusElement.textContent = 'Ошибка: Неверный формат ответа';
-          return;
+          throw new Error(`Ошибка парсинга JSON: ${jsonError.message}, текст: ${text}`);
         }
         
         // Обрабатываем различные форматы ответа
         let assistantMessage;
-        if (data.message && typeof data.message.content === 'string') {
+        if (data.message && typeof data.message === 'string') {
+          assistantMessage = data.message;
+        } else if (data.message && typeof data.message.content === 'string') {
           assistantMessage = data.message.content;
         } else if (data.choices && data.choices[0] && data.choices[0].message && typeof data.choices[0].message.content === 'string') {
           assistantMessage = data.choices[0].message.content;
         } else if (data.content && typeof data.content === 'string') {
-          // Еще один возможный формат
           assistantMessage = data.content;
         } else if (data.text && typeof data.text === 'string') {
-          // Еще один возможный формат
           assistantMessage = data.text;
         } else if (typeof data === 'string') {
-          // Если сам ответ - строка
           assistantMessage = data;
         } else {
           console.error('Неверный формат ответа:', data);
-          statusElement.textContent = 'Ошибка: Неизвестный формат ответа';
-          return;
+          throw new Error('Неизвестный формат ответа');
         }
         
         // Проверяем, что ответ получен и не пустой
@@ -226,32 +419,184 @@
           assistantMessage = 'Извините, произошла ошибка. Пожалуйста, попробуйте еще раз.';
         }
 
+        // Удаляем заглушку
+        messagesContainer.removeChild(assistantPlaceholder);
+        
+        // Добавляем ответ ассистента в интерфейс
+        const assistantMessageElement = document.createElement('div');
+        assistantMessageElement.className = 'message assistant g-text';
+        
+        const assistantAvatar = document.createElement('div');
+        assistantAvatar.className = 'message-avatar';
+        assistantAvatar.textContent = 'AI';
+        
+        const assistantContent = document.createElement('div');
+        assistantContent.className = 'message-content g-text g-text_body-1';
+        // Заменяем переносы строк на HTML-теги <br>
+        const formattedMessage = assistantMessage.split('\n').join('<br>');
+        assistantContent.innerHTML = formattedMessage;
+        
+        assistantMessageElement.appendChild(assistantAvatar);
+        assistantMessageElement.appendChild(assistantContent);
+        messagesContainer.appendChild(assistantMessageElement);
+        
         // Сохраняем ответ в истории
         messages.push({
           role: 'assistant',
           content: assistantMessage
         });
         
-        // Добавляем ответ в интерфейс с поддержкой переносов строк
-        const assistantMessageElement = document.createElement('div');
-        assistantMessageElement.className = 'message assistant';
-        // Заменяем переносы строк на HTML-теги <br>
-        const formattedMessage = assistantMessage.split('\n').join('<br>');
-        assistantMessageElement.innerHTML = formattedMessage;
-        messagesContainer.appendChild(assistantMessageElement);
-        
-        // Очищаем статус
-        statusElement.textContent = '';
-        
-        // Прокручиваем чат вниз
+        // Прокручиваем вниз к последнему сообщению
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
         // Делаем фокус на поле ввода для удобства пользователя
         document.getElementById('message-input').focus();
         
       } catch (error) {
-        statusElement.textContent = `Ошибка: ${error.message}`;
         console.error('Ошибка при отправке сообщения:', error);
+        
+        // Удаляем заглушку
+        messagesContainer.removeChild(assistantPlaceholder);
+        
+        // Добавляем сообщение об ошибке
+        const errorMessageElement = document.createElement('div');
+        errorMessageElement.className = 'message assistant g-text';
+        
+        const assistantAvatar = document.createElement('div');
+        assistantAvatar.className = 'message-avatar';
+        assistantAvatar.textContent = 'AI';
+        
+        const errorContent = document.createElement('div');
+        errorContent.className = 'message-content g-text g-text_body-1';
+        errorContent.innerHTML = `<span class="g-text g-text_color-danger">Ошибка: ${error.message}</span>`;
+        
+        errorMessageElement.appendChild(assistantAvatar);
+        errorMessageElement.appendChild(errorContent);
+        messagesContainer.appendChild(errorMessageElement);
+      }
+    }
+    
+    // Отправка сообщения через OpenAI Assistant API
+    async function sendAssistantMessage() {
+      const messageInput = document.getElementById('message-input');
+      const messagesContainer = document.getElementById('messages');
+      const statusElement = document.getElementById('status');
+      const messageContent = messageInput.value.trim();
+      
+      if (!messageContent) return;
+      
+      // Добавляем сообщение пользователя в интерфейс
+      const userMessageElement = document.createElement('div');
+      userMessageElement.className = 'message user';
+      
+      // Создаем аватар пользователя
+      const userAvatar = document.createElement('div');
+      userAvatar.className = 'message-avatar user';
+      userAvatar.textContent = 'Вы';
+      
+      // Создаем контейнер для текста сообщения
+      const userContent = document.createElement('div');
+      userContent.className = 'message-content';
+      userContent.textContent = messageContent;
+      
+      // Добавляем аватар и текст в сообщение
+      userMessageElement.appendChild(userAvatar);
+      userMessageElement.appendChild(userContent);
+      
+      // Добавляем сообщение в контейнер
+      messagesContainer.appendChild(userMessageElement);
+      
+      // Очищаем поле ввода
+      messageInput.value = '';
+      
+      // Добавляем заглушку для ответа ассистента
+      const assistantPlaceholder = document.createElement('div');
+      assistantPlaceholder.className = 'message assistant';
+      
+      const assistantAvatar = document.createElement('div');
+      assistantAvatar.className = 'message-avatar';
+      assistantAvatar.textContent = 'AI';
+      
+      const assistantContent = document.createElement('div');
+      assistantContent.className = 'message-content';
+      assistantContent.innerHTML = '<div class="status">Ожидание ответа...</div>';
+      
+      assistantPlaceholder.appendChild(assistantAvatar);
+      assistantPlaceholder.appendChild(assistantContent);
+      messagesContainer.appendChild(assistantPlaceholder);
+      
+      // Прокручиваем вниз к последнему сообщению
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      try {
+        // Отправляем запрос на сервер
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: messageContent
+          })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Ошибка сервера: ${response.status}, текст: ${errorText}`);
+        }
+        
+        // Получаем ответ в формате JSON
+        const data = await response.json();
+        console.log('Получен ответ:', data);
+        
+        // Получаем текст ответа
+        const assistantMessage = data.reply || 'Извините, произошла ошибка при обработке запроса.';
+        
+        // Удаляем заглушку
+        messagesContainer.removeChild(assistantPlaceholder);
+        
+        // Добавляем ответ ассистента в интерфейс
+        const assistantMessageElement = document.createElement('div');
+        assistantMessageElement.className = 'message assistant';
+        
+        const assistantResponseAvatar = document.createElement('div');
+        assistantResponseAvatar.className = 'message-avatar';
+        assistantResponseAvatar.textContent = 'AI';
+        
+        const assistantResponseContent = document.createElement('div');
+        assistantResponseContent.className = 'message-content';
+        // Заменяем переносы строк на HTML-теги <br>
+        const formattedMessage = assistantMessage.split('\n').join('<br>');
+        assistantResponseContent.innerHTML = formattedMessage;
+        
+        assistantMessageElement.appendChild(assistantResponseAvatar);
+        assistantMessageElement.appendChild(assistantResponseContent);
+        messagesContainer.appendChild(assistantMessageElement);
+        
+        // Прокручиваем вниз к последнему сообщению
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+      } catch (error) {
+        console.error('Ошибка при отправке сообщения:', error);
+        
+        // Удаляем заглушку
+        messagesContainer.removeChild(assistantPlaceholder);
+        
+        // Добавляем сообщение об ошибке
+        const errorMessageElement = document.createElement('div');
+        errorMessageElement.className = 'message assistant';
+        
+        const assistantErrorAvatar = document.createElement('div');
+        assistantErrorAvatar.className = 'message-avatar';
+        assistantErrorAvatar.textContent = 'AI';
+        
+        const errorContent = document.createElement('div');
+        errorContent.className = 'message-content';
+        errorContent.innerHTML = `<span style="color: var(--error-color);">Ошибка: ${error.message}</span>`;
+        
+        errorMessageElement.appendChild(assistantErrorAvatar);
+        errorMessageElement.appendChild(errorContent);
+        messagesContainer.appendChild(errorMessageElement);
       }
     }
     
@@ -259,9 +604,12 @@
     document.getElementById('message-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendMessage();
+        sendAssistantMessage();
       }
     });
+    
+    // Обработка нажатия кнопки отправки
+    document.getElementById('send-button').addEventListener('click', sendAssistantMessage);
   </script>
 </body>
 </html>

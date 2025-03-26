@@ -17,6 +17,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+// ID ассистента OpenAI
+const ASSISTANT_ID = 'asst_uKuVLbdzuKS3kmKGf47qQVcF';
+
+// Хранилище для thread_id пользователей (в реальном приложении следует использовать базу данных)
+const userThreads = {};
+
 // Инициализация приложения Express
 const app = express();
 const PORT = process.env.PORT || 3008;
@@ -87,6 +93,7 @@ app.get('/api/test-chat', (req, res) => {
 
 // Основной маршрут для обработки запросов чата с заготовленным ответом,
 // если OpenAI API недоступен
+// Существующий endpoint для совместимости с предыдущей версией
 app.post('/api/chat', async (req, res) => {
   console.log('Получен запрос к /api/chat');
   
@@ -152,6 +159,98 @@ app.post('/api/chat', async (req, res) => {
     // Вместо отправки ошибки, отправляем запасной ответ
     // чтобы клиент мог продолжать работу
     res.json(fallbackResponse);
+  }
+});
+
+// Новый endpoint для работы с OpenAI Assistant API
+app.post('/chat', async (req, res) => {
+  console.log('Получен запрос к /chat');
+  
+  // Проверка наличия API ключа
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('ОШИБКА: OPENAI_API_KEY отсутствует');
+    return res.status(500).json({ reply: 'Ошибка сервера: API ключ отсутствует' });
+  }
+
+  // Проверка наличия сообщения в запросе
+  if (!req.body.message || typeof req.body.message !== 'string') {
+    console.error('Ошибка в формате запроса: отсутствует поле message');
+    return res.status(400).json({ reply: 'Ошибка в формате запроса: отсутствует поле message' });
+  }
+  
+  try {
+    // Получаем сообщение пользователя
+    const userMessage = req.body.message;
+    console.log('Сообщение пользователя:', userMessage);
+    
+    // Получаем IP пользователя для идентификации (в реальном приложении лучше использовать авторизацию)
+    const userIP = req.ip || req.socket.remoteAddress;
+    
+    // Проверяем, есть ли у пользователя уже созданный thread
+    if (!userThreads[userIP]) {
+      console.log('Создание нового thread для пользователя');
+      // Создаем новый thread для пользователя
+      const thread = await openai.beta.threads.create();
+      userThreads[userIP] = thread.id;
+      console.log('Создан новый thread:', thread.id);
+    }
+    
+    const threadId = userThreads[userIP];
+    console.log('Используем thread:', threadId);
+    
+    // Добавляем сообщение пользователя в thread
+    await openai.beta.threads.messages.create(threadId, {
+      role: 'user',
+      content: userMessage
+    });
+    
+    // Запускаем run с assistant_id
+    const run = await openai.beta.threads.runs.create(threadId, {
+      assistant_id: ASSISTANT_ID
+    });
+    
+    // Ожидаем завершения run
+    let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+    
+    // Проверяем статус каждые 500 мс
+    while (runStatus.status !== 'completed' && runStatus.status !== 'failed') {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+      console.log('Статус выполнения:', runStatus.status);
+    }
+    
+    if (runStatus.status === 'failed') {
+      console.error('Ошибка выполнения:', runStatus.last_error);
+      return res.status(500).json({ reply: 'Ошибка при обработке запроса ассистентом' });
+    }
+    
+    // Получаем ответ от ассистента
+    const messages = await openai.beta.threads.messages.list(threadId);
+    
+    // Находим последнее сообщение от ассистента
+    const assistantMessages = messages.data.filter(msg => msg.role === 'assistant');
+    
+    if (assistantMessages.length === 0) {
+      return res.status(500).json({ reply: 'Не удалось получить ответ от ассистента' });
+    }
+    
+    // Берем самое последнее сообщение от ассистента
+    const latestMessage = assistantMessages[0];
+    
+    // Извлекаем текст сообщения
+    let replyText = '';
+    if (latestMessage.content && latestMessage.content.length > 0) {
+      const textContent = latestMessage.content.filter(content => content.type === 'text');
+      if (textContent.length > 0) {
+        replyText = textContent[0].text.value;
+      }
+    }
+    
+    // Отправляем ответ клиенту
+    res.json({ reply: replyText || 'Ассистент не предоставил текстового ответа' });
+  } catch (error) {
+    console.error('Ошибка при работе с OpenAI Assistant API:', error.message);
+    res.status(500).json({ reply: 'Произошла ошибка при обработке запроса' });
   }
 });
 
