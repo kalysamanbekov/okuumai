@@ -40,6 +40,29 @@
       justify-content: space-between;
     }
     
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .back-to-catalog {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 6px 10px;
+      border-radius: 4px;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    
+    .back-to-catalog:hover {
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+    
     .logo {
       font-weight: bold;
       font-size: 20px;
@@ -246,7 +269,13 @@
     <div class="logo">
       OKUUM.AI
     </div>
-    <div>
+    <div class="header-actions">
+      <a href="/catalog.html" class="back-to-catalog">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Вернуться в каталог
+      </a>
       <span id="time"></span>
     </div>
   </div>
@@ -536,7 +565,8 @@
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            message: messageContent
+            message: messageContent,
+            material_id: materialId // Добавляем material_id из URL параметров
           })
         });
         
@@ -610,6 +640,48 @@
     
     // Обработка нажатия кнопки отправки
     document.getElementById('send-button').addEventListener('click', sendAssistantMessage);
+    
+    // Получение параметров из URL
+    function getUrlParameter(name) {
+      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+      const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+      const results = regex.exec(location.search);
+      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+    
+    // Получаем material_id из URL параметров
+    const materialId = getUrlParameter('material_id');
+    
+    // Если есть material_id, отправляем первое сообщение с запросом материала
+    window.addEventListener('DOMContentLoaded', () => {
+      if (materialId) {
+        console.log('Загружен материал:', materialId);
+        
+        // Формируем первое сообщение в зависимости от типа материала
+        let initialMessage = '';
+        
+        if (materialId === 'test_full') {
+          initialMessage = 'Я хочу пройти полное пробное тестирование ОРТ';
+        } else if (materialId === 'trainer_math1') {
+          initialMessage = 'Я хочу потренироваться в базовой математике (Математика 1)';
+        } else if (materialId === 'trainer_math2') {
+          initialMessage = 'Я хочу потренироваться в продвинутой математике (Математика 2)';
+        } else if (materialId === 'trainer_analogies') {
+          initialMessage = 'Я хочу потренироваться в аналогиях и дополнениях';
+        } else if (materialId === 'trainer_reading') {
+          initialMessage = 'Я хочу потренироваться в чтении и понимании текста';
+        }
+        
+        if (initialMessage) {
+          // Заполняем поле ввода и имитируем отправку сообщения
+          const messageInput = document.getElementById('message-input');
+          messageInput.value = initialMessage;
+          setTimeout(() => {
+            sendAssistantMessage();
+          }, 500);
+        }
+      }
+    });
   </script>
 </body>
 </html>

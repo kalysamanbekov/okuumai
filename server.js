@@ -17,8 +17,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// ID ассистента OpenAI
-const ASSISTANT_ID = process.env.ASSISTANT_ID || 'asst_k4AUnwgcryTCBzX3W4EPH3ee';
+// Маппинг material_id к assistant_id
+const ASSISTANTS_MAP = {
+  'test_full': 'asst_NDIJTricZzQXUHcRH01NRoLW',      // Пробное тестирование
+  'trainer_math1': 'asst_7od30lZQMDMo6xTbVZ9yUZ0K',   // Математика 1
+  'trainer_math2': 'asst_k4AUnwgcryTCBzX3W4EPH3ee',   // Математика 2
+  'trainer_analogies': 'asst_wOilQhPJD7czTvXoAfAlX0Wa', // Аналогии и дополнения
+  'trainer_reading': 'asst_PcxUJ4NlKDvFxpw8iqydcSj9'   // Чтение и понимание
+};
 
 // Хранилище для thread_id пользователей (в реальном приложении следует использовать базу данных)
 const userThreads = {};
@@ -162,76 +168,72 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Новый endpoint для работы с OpenAI Assistant API
-app.post('/chat', async (req, res) => {
-  console.log('Получен запрос к /chat');
+// Модуль для работы с OpenAI Assistant API
+const assistantModule = {
+  // Получение assistant_id по material_id
+  getAssistantId: (materialId) => {
+    const assistantId = ASSISTANTS_MAP[materialId];
+    if (!assistantId) {
+      throw new Error(`Неизвестный material_id: ${materialId}`);
+    }
+    return assistantId;
+  },
   
-  // Проверка наличия API ключа
-  if (!process.env.OPENAI_API_KEY) {
-    console.error('ОШИБКА: OPENAI_API_KEY отсутствует');
-    return res.status(500).json({ reply: 'Ошибка сервера: API ключ отсутствует' });
-  }
-
-  // Проверка наличия сообщения в запросе
-  if (!req.body.message || typeof req.body.message !== 'string') {
-    console.error('Ошибка в формате запроса: отсутствует поле message');
-    return res.status(400).json({ reply: 'Ошибка в формате запроса: отсутствует поле message' });
-  }
-  
-  try {
-    // Получаем сообщение пользователя
-    const userMessage = req.body.message;
-    console.log('Сообщение пользователя:', userMessage);
+  // Получение или создание thread для пользователя
+  getOrCreateThread: async (userId, materialId) => {
+    // Используем комбинацию userId и materialId как ключ
+    // чтобы у каждого пользователя был отдельный thread для каждого типа материала
+    const threadKey = `${userId}_${materialId}`;
     
-    // Получаем IP пользователя для идентификации (в реальном приложении лучше использовать авторизацию)
-    const userIP = req.ip || req.socket.remoteAddress;
-    
-    // Проверяем, есть ли у пользователя уже созданный thread
-    if (!userThreads[userIP]) {
-      console.log('Создание нового thread для пользователя');
-      // Создаем новый thread для пользователя
+    if (!userThreads[threadKey]) {
+      console.log(`Создание нового thread для пользователя ${userId} и материала ${materialId}`);
       const thread = await openai.beta.threads.create();
-      userThreads[userIP] = thread.id;
+      userThreads[threadKey] = thread.id;
       console.log('Создан новый thread:', thread.id);
     }
     
-    const threadId = userThreads[userIP];
-    console.log('Используем thread:', threadId);
-    
-    // Добавляем сообщение пользователя в thread
-    await openai.beta.threads.messages.create(threadId, {
+    return userThreads[threadKey];
+  },
+  
+  // Добавление сообщения пользователя в thread
+  addUserMessage: async (threadId, message) => {
+    return await openai.beta.threads.messages.create(threadId, {
       role: 'user',
-      content: userMessage
+      content: message
     });
-    
-    // Запускаем run с assistant_id
-    const run = await openai.beta.threads.runs.create(threadId, {
-      assistant_id: ASSISTANT_ID
+  },
+  
+  // Запуск run с определенным assistant_id
+  runAssistant: async (threadId, assistantId) => {
+    console.log(`[DEBUG] Отправка запроса к ассистенту с ID: ${assistantId}`);
+    return await openai.beta.threads.runs.create(threadId, {
+      assistant_id: assistantId
     });
-    
-    // Ожидаем завершения run
-    let runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+  },
+  
+  // Ожидание завершения run
+  waitForRunCompletion: async (threadId, runId) => {
+    let runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
     
     // Проверяем статус каждые 500 мс
     while (runStatus.status !== 'completed' && runStatus.status !== 'failed') {
       await new Promise(resolve => setTimeout(resolve, 500));
-      runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
+      runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
       console.log('Статус выполнения:', runStatus.status);
     }
     
-    if (runStatus.status === 'failed') {
-      console.error('Ошибка выполнения:', runStatus.last_error);
-      return res.status(500).json({ reply: 'Ошибка при обработке запроса ассистентом' });
-    }
-    
-    // Получаем ответ от ассистента
+    return runStatus;
+  },
+  
+  // Получение последнего ответа ассистента
+  getLatestAssistantReply: async (threadId) => {
     const messages = await openai.beta.threads.messages.list(threadId);
     
     // Находим последнее сообщение от ассистента
     const assistantMessages = messages.data.filter(msg => msg.role === 'assistant');
     
     if (assistantMessages.length === 0) {
-      return res.status(500).json({ reply: 'Не удалось получить ответ от ассистента' });
+      throw new Error('Не удалось получить ответ от ассистента');
     }
     
     // Берем самое последнее сообщение от ассистента
@@ -246,8 +248,82 @@ app.post('/chat', async (req, res) => {
       }
     }
     
+    return replyText || 'Ассистент не предоставил текстового ответа';
+  }
+};
+
+// Новый endpoint для работы с OpenAI Assistant API на основе material_id
+app.post('/chat', async (req, res) => {
+  console.log('Получен запрос к /chat');
+  
+  // Проверка наличия API ключа
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('ОШИБКА: OPENAI_API_KEY отсутствует');
+    return res.status(500).json({ reply: 'Ошибка сервера: API ключ отсутствует' });
+  }
+
+  // Проверка наличия необходимых полей в запросе
+  if (!req.body.message || typeof req.body.message !== 'string') {
+    console.error('Ошибка в формате запроса: отсутствует поле message');
+    return res.status(400).json({ reply: 'Ошибка в формате запроса: отсутствует поле message' });
+  }
+  
+  if (!req.body.material_id || typeof req.body.material_id !== 'string') {
+    console.error('Ошибка в формате запроса: отсутствует поле material_id');
+    return res.status(400).json({ reply: 'Ошибка в формате запроса: отсутствует поле material_id' });
+  }
+  
+  try {
+    // Получаем данные из запроса
+    const { message, material_id } = req.body;
+    console.log(`Сообщение пользователя для материала ${material_id}:`, message);
+    
+    // Получаем assistant_id по material_id
+    let assistantId;
+    try {
+      assistantId = assistantModule.getAssistantId(material_id);
+      console.log(`Используем ассистента ${assistantId} для материала ${material_id}`);
+      
+      // Дополнительная проверка наличия assistant_id в ASSISTANTS_MAP
+      if (!ASSISTANTS_MAP[material_id]) {
+        throw new Error(`Материал с ID ${material_id} не найден в ASSISTANTS_MAP`);
+      }
+      
+      // Проверка соответствия полученного assistant_id и значения из ASSISTANTS_MAP
+      if (assistantId !== ASSISTANTS_MAP[material_id]) {
+        console.warn(`[ПРЕДУПРЕЖДЕНИЕ] Несоответствие assistant_id: получено ${assistantId}, ожидалось ${ASSISTANTS_MAP[material_id]}`);
+      }
+    } catch (error) {
+      console.error(error.message);
+      return res.status(400).json({ reply: error.message });
+    }
+    
+    // Получаем ID пользователя (в реальном приложении лучше использовать авторизацию)
+    const userId = req.ip || req.socket.remoteAddress;
+    
+    // Получаем или создаем thread для пользователя и выбранного материала
+    const threadId = await assistantModule.getOrCreateThread(userId, material_id);
+    console.log(`Используем thread ${threadId} для пользователя ${userId} и материала ${material_id}`);
+    
+    // Добавляем сообщение пользователя в thread
+    await assistantModule.addUserMessage(threadId, message);
+    
+    // Запускаем run с выбранным assistant_id
+    const run = await assistantModule.runAssistant(threadId, assistantId);
+    
+    // Ожидаем завершения run
+    const runStatus = await assistantModule.waitForRunCompletion(threadId, run.id);
+    
+    if (runStatus.status === 'failed') {
+      console.error('Ошибка выполнения:', runStatus.last_error);
+      return res.status(500).json({ reply: 'Ошибка при обработке запроса ассистентом' });
+    }
+    
+    // Получаем ответ от ассистента
+    const replyText = await assistantModule.getLatestAssistantReply(threadId);
+    
     // Отправляем ответ клиенту
-    res.json({ reply: replyText || 'Ассистент не предоставил текстового ответа' });
+    res.json({ reply: replyText });
   } catch (error) {
     console.error('Ошибка при работе с OpenAI Assistant API:', error.message);
     res.status(500).json({ reply: 'Произошла ошибка при обработке запроса' });
