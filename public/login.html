@@ -264,12 +264,19 @@
     // Проверяем результат перенаправления при загрузке страницы
     window.addEventListener('load', async () => {
       try {
+        console.log('Проверяем результат перенаправления...');
         const result = await getRedirectResult(auth);
-        if (result) {
-          // Успешная аутентификация через Google
-          window.location.href = '/catalog.html';
+        console.log('Результат перенаправления:', result);
+        
+        if (result && result.user) {
+          console.log('Успешная аутентификация через Google:', result.user);
+          // Добавляем небольшую задержку перед перенаправлением
+          setTimeout(() => {
+            window.location.href = '/catalog.html';
+          }, 500);
         }
       } catch (error) {
+        console.error('Ошибка при обработке перенаправления:', error);
         showError('Ошибка входа через Google: ' + error.message);
       }
     });
@@ -292,6 +299,11 @@
     auth.onAuthStateChanged((user) => {
       if (user) {
         console.log('Пользователь аутентифицирован:', user);
+        // Если пользователь аутентифицирован и мы на странице логина, перенаправляем на каталог
+        if (window.location.pathname.includes('login.html')) {
+          console.log('Перенаправляем аутентифицированного пользователя на каталог');
+          window.location.href = '/catalog.html';
+        }
       } else {
         console.log('Пользователь не аутентифицирован');
       }
