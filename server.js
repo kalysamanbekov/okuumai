@@ -18,7 +18,7 @@ const openai = new OpenAI({
 });
 
 // ID ассистента OpenAI
-const ASSISTANT_ID = 'asst_uKuVLbdzuKS3kmKGf47qQVcF';
+const ASSISTANT_ID = process.env.ASSISTANT_ID || 'asst_uKuVLbdzuKS3kmKGf47qQVcF';
 
 // Хранилище для thread_id пользователей (в реальном приложении следует использовать базу данных)
 const userThreads = {};
