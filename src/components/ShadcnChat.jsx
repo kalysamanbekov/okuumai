@@ -47,9 +47,9 @@ const ShadcnChat = () => {
   };
 
   return (
-    <div className="flex flex-col h-[600px] max-w-2xl mx-auto border border-border rounded-lg overflow-hidden bg-background shadow-sm">
+    <div className="flex flex-col h-[600px] max-w-2xl mx-auto border rounded-lg overflow-hidden bg-background shadow-sm" style={{ borderColor: 'hsl(var(--border))' }}>
       {/* Заголовок чата */}
-      <div className="p-4 border-b border-border bg-muted/30 flex justify-between items-center">
+      <div className="p-4 border-b bg-muted/30 flex justify-between items-center" style={{ borderColor: 'hsl(var(--border))' }}>
         <h2 className="text-lg font-medium">OKUUM.AI Чат</h2>
         {messages.length > 0 && (
           <Button 
@@ -105,7 +105,7 @@ const ShadcnChat = () => {
       </div>
       
       {/* Поле ввода сообщения */}
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t" style={{ borderColor: 'hsl(var(--border))' }}>
         <ChatInput 
           onSendMessage={handleSendMessage} 
           isLoading={isLoading} 

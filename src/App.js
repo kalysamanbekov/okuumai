@@ -62,7 +62,7 @@ function App() {
   return (
     <ThemeProvider>
       <div className="bg-background min-h-screen">
-        <header className="border-b border-border p-4">
+        <header className="border-b p-4" style={{ borderColor: 'hsl(var(--border))' }}>
           <div className="container mx-auto flex justify-between items-center">
             <h1 className="text-xl font-bold">OKUUM.AI</h1>
             <div className="flex items-center gap-4">

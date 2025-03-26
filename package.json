@@ -24,6 +24,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@radix-ui/react-form": "^0.1.2",
     "@radix-ui/themes": "^3.2.1",
     "autoprefixer": "^10.4.21",
     "axios": "^1.8.4",
@@ -52,6 +53,7 @@
     "@babel/core": "^7.26.10",
     "@babel/preset-env": "^7.26.9",
     "@babel/preset-react": "^7.26.3",
+    "@tailwindcss/postcss": "^4.0.17",
     "babel-loader": "^10.0.0",
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.3",
