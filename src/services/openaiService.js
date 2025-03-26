@@ -1,47 +1,120 @@
-// u0423u043fu0440u043eu0449u0435u043du043du0430u044f u0432u0435u0440u0441u0438u044f u0441u0435u0440u0432u0438u0441u0430 u0447u0430u0442u0430 u0431u0435u0437 OpenAI
+/**
+ * Сервис для интеграции с OpenAI API
+ * Обеспечивает прямое взаимодействие с OpenAI без промежуточных прокси
+ */
+
+import OpenAI from 'openai';
+
+// Конфигурация API
+const OPENAI_MODEL = 'gpt-4o'; // Можно изменить на gpt-3.5-turbo для снижения стоимости
+const API_TIMEOUT = 30000; // 30 секунд таймаут для запросов
+
+// Инициализация OpenAI клиента
+const initializeOpenAI = () => {
+  const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
+  
+  if (!apiKey) {
+    console.error('OpenAI API key не найден! Убедитесь, что в файле .env установлена переменная REACT_APP_OPENAI_API_KEY');
+    return null;
+  }
+  
+  try {
+    return new OpenAI({
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true, // Необходимо для работы в браузере
+      timeout: API_TIMEOUT
+    });
+  } catch (error) {
+    console.error('Ошибка инициализации OpenAI клиента:', error);
+    return null;
+  }
+};
+
+// Создаем экземпляр OpenAI клиента
+const openaiClient = initializeOpenAI();
 
 /**
- * u041eu0442u043fu0440u0430u0432u043bu044fu0435u0442 u0437u0430u043fu0440u043eu0441 u043du0430 u043bu043eu043au0430u043bu044cu043du044bu0439 u0441u0435u0440u0432u0435u0440 u0438 u043fu043eu043bu0443u0447u0430u0435u0442 u043eu0442u0432u0435u0442
- * @param {Array} messages - u0421u043fu0438u0441u043eu043a u0441u043eu043eu0431u0449u0435u043du0438u0439 u0434u043bu044f u043eu0442u043fu0440u0430u0432u043au0438 u043du0430 u0441u0435u0440u0432u0435u0440
- * @returns {Promise} - u041eu0442u0432u0435u0442 u043eu0442 u0441u0435u0440u0432u0435u0440u0430
+ * Отправляет запрос к OpenAI Chat Completions API
+ * @param {Array} messages - Массив сообщений для API в формате [{role: 'user', content: 'текст'}]
+ * @returns {Promise<string>} - Текст ответа от API или сообщение об ошибке
  */
-async function getChatCompletion(messages) {
+export const getChatCompletion = async (messages) => {
   try {
-    console.log('u041eu0442u043fu0440u0430u0432u043au0430 u0437u0430u043fu0440u043eu0441u0430 u043du0430 u0441u0435u0440u0432u0435u0440...', messages);
+    console.log('Отправка запроса через локальный прокси сервер');
+    console.log('Количество сообщений:', messages.length);
     
-    // u0418u0441u043fu043eu043bu044cu0437u0443u0435u043c u0442u0435u043au0443u0449u0438u0439 u0445u043eu0441u0442 u0432u043cu0435u0441u0442u043e u043bu043eu043au0430u043bu044cu043du043eu0433u043e u0441u0435u0440u0432u0435u0440u0430
-    // u042du0442u043e u0444u043eu0440u0441u0438u0440u0443u0435u0442 u0438u0441u043fu043eu043bu044cu0437u043eu0432u0430u043du0438u0435 u0442u0435u043au0443u0449u0435u0433u043e u0434u043eu043cu0435u043du0430 u0432u043cu0435u0441u0442u043e localhost
-    const baseUrl = window.location.origin;
-    const apiUrl = `${baseUrl}/api/chat`;
-    console.log('u0418u0441u043fu043eu043bu044cu0437u0443u0435u043c API URL:', apiUrl);
+    // Проверка на пустые сообщения
+    if (!messages || messages.length === 0) {
+      throw new Error('Нет сообщений для отправки в API');
+    }
     
-    // u041eu0442u043fu0440u0430u0432u043au0430 u0437u0430u043fu0440u043eu0441u0430 u043du0430 u0441u0435u0440u0432u0435u0440
+    // Определяем URL в зависимости от окружения
+    const apiUrl = process.env.NODE_ENV === 'production' 
+      ? '/api/chat'
+      : 'http://localhost:3008/api/chat';
+    
+    console.log('Используем URL:', apiUrl);
+    
+    // Отправляем запрос через fetch API
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'simple-chat',
+        model: OPENAI_MODEL,
         messages: messages
       })
     });
     
-    // u041fu0440u043eu0432u0435u0440u043au0430 u0443u0441u043fu0435u0448u043du043eu0433u043e u043eu0442u0432u0435u0442u0430
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`u041eu0448u0438u0431u043au0430 u0437u0430u043fu0440u043eu0441u0430: ${response.status} - ${errorData.error || response.statusText}`);
+      const errorText = await response.text();
+      console.error('Ошибка API:', errorText);
+      throw new Error(`Запрос завершился с ошибкой: ${response.status}`);
     }
     
-    // u041fu043eu043bu0443u0447u0435u043du0438u0435 u0434u0430u043du043du044bu0445 u043eu0442u0432u0435u0442u0430
     const data = await response.json();
-    console.log('u041fu043eu043bu0443u0447u0435u043d u043eu0442u0432u0435u0442 u043eu0442 u0441u0435u0440u0432u0435u0440u0430:', data);
+    console.log('Ответ получен:', data);
     
-    return data;
+    if (data.choices && data.choices.length > 0) {
+      const messageContent = data.choices[0].message.content;
+      console.log('Получен ответ от OpenAI API:', messageContent.substring(0, 50) + '...');
+      return messageContent;
+    } else {
+      throw new Error('Неожиданный формат ответа');
+    }
   } catch (error) {
-    console.error('u041eu0448u0438u0431u043au0430 u043fu0440u0438 u043eu0442u043fu0440u0430u0432u043au0435 u0437u0430u043fu0440u043eu0441u0430:', error);
-    throw error;
+    // Детальная обработка ошибок
+    console.error('Ошибка при вызове OpenAI API:', error);
+    
+    // Анализ типа ошибки для лучшего сообщения пользователю
+    if (error.status === 429) {
+      return 'Превышен лимит запросов к API. Пожалуйста, попробуйте позже.';
+    } else if (error.status === 401) {
+      return 'Ошибка авторизации. Проверьте API ключ.';
+    } else if (error.status === 500) {
+      return 'Ошибка на стороне сервера OpenAI. Попробуйте позже.';
+    } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      return 'Превышено время ожидания ответа от API. Попробуйте позже.';
+    }
+    
+    return `Ошибка при обращении к API: ${error.message}`;
   }
-}
+};
 
-export { getChatCompletion };
+/**
+ * Преобразует сообщения из формата приложения в формат API OpenAI
+ * @param {Array} messagesArray - Массив сообщений в формате приложения
+ * @returns {Array} - Массив сообщений в формате OpenAI API
+ */
+export const formatMessagesForAPI = (messagesArray) => {
+  if (!messagesArray || !Array.isArray(messagesArray)) {
+    console.error('Некорректный формат сообщений:', messagesArray);
+    return [];
+  }
+  
+  return messagesArray.map(msg => ({
+    role: msg.sender === 'user' ? 'user' : 'assistant',
+    content: msg.text || ''
+  }));
+};

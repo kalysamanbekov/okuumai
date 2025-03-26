@@ -4,8 +4,21 @@ const path = require('path');
 const morgan = require('morgan');
 require('dotenv').config();
 
-// Отключаем проверку API-ключа для демонстрационных целей
-console.log('Запуск в демонстрационном режиме без API OpenAI');
+// Инициализация OpenAI API
+const OpenAI = require('openai');
+
+// Проверка наличия API ключа
+if (!process.env.OPENAI_API_KEY) {
+  console.warn('ВНИМАНИЕ: OPENAI_API_KEY не найден в переменных окружения. Используется демо-режим.');
+  console.log('Запуск в демонстрационном режиме без API OpenAI');
+} else {
+  console.log('OpenAI API ключ найден. Запуск с полной функциональностью.');
+}
+
+// Инициализация OpenAI клиента
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 
 // Демо-данные для имитации ответов чата
@@ -113,8 +126,20 @@ app.post('/api/chat', async (req, res) => {
   
   // Проверка наличия API ключа
   if (!process.env.OPENAI_API_KEY) {
-    console.error('ОШИБКА: OPENAI_API_KEY отсутствует');
-    return res.json(fallbackResponse); // Используем запасной ответ вместо ошибки
+    console.log('OPENAI_API_KEY отсутствует, используем демо-режим');
+    // Выбираем случайный ответ из демо-данных
+    const demoResponse = DEMO_RESPONSES[responseIndex];
+    responseIndex = (responseIndex + 1) % DEMO_RESPONSES.length;
+    
+    return res.json({
+      message: {
+        role: 'assistant',
+        content: demoResponse
+      },
+      id: `demo-${Date.now()}`,
+      model: 'demo-model',
+      usage: { total_tokens: 20 }
+    });
   }
 
   // Проверка наличия сообщений в запросе
@@ -136,11 +161,11 @@ app.post('/api/chat', async (req, res) => {
       });
     }
     
-    // Ограничиваем количество маркеров для уменьшения нагрузки
+    // Используем современную модель OpenAI
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o', // Используем современную модель
       messages: messages,
-      max_tokens: 300, // Уменьшаем лимит токенов
+      max_tokens: 500, // Увеличиваем лимит токенов для более полных ответов
       temperature: 0.7,
     });
     
