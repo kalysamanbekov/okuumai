@@ -2,32 +2,24 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const morgan = require('morgan');
-const { OpenAI } = require('openai');
 require('dotenv').config();
 
-// Проверяем наличие API-ключа
-if (!process.env.OPENAI_API_KEY) {
-  console.error('Ошибка: OPENAI_API_KEY не найден в переменных окружения');
-  console.error('Создайте файл .env в корневой директории с содержимым: OPENAI_API_KEY=ваш_ключ');
-  process.exit(1);
-}
+// Отключаем проверку API-ключа для демонстрационных целей
+console.log('Запуск в демонстрационном режиме без API OpenAI');
 
-// Инициализация OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
-// Маппинг material_id к assistant_id
-const ASSISTANTS_MAP = {
-  'test_full': 'asst_NDIJTricZzQXUHcRH01NRoLW',      // Пробное тестирование
-  'trainer_math1': 'asst_7od30lZQMDMo6xTbVZ9yUZ0K',   // Математика 1
-  'trainer_math2': 'asst_k4AUnwgcryTCBzX3W4EPH3ee',   // Математика 2
-  'trainer_analogies': 'asst_wOilQhPJD7czTvXoAfAlX0Wa', // Аналогии и дополнения
-  'trainer_reading': 'asst_PcxUJ4NlKDvFxpw8iqydcSj9'   // Чтение и понимание
-};
+// Демо-данные для имитации ответов чата
+const DEMO_RESPONSES = [
+  'Привет! Я демо-версия ассистента OKUUM.AI. Я могу помочь вам с подготовкой к экзаменам.',
+  'Это демонстрационный режим интерфейса. API OpenAI не используется.',
+  'В полной версии я могу отвечать на вопросы по математике, логике и другим предметам.',
+  'Shadcn/UI предоставляет красивые и доступные компоненты для React приложений.',
+  'Вы можете настроить тему оформления с помощью кнопки в правом верхнем углу.'
+];
 
-// Хранилище для thread_id пользователей (в реальном приложении следует использовать базу данных)
-const userThreads = {};
+// Счетчик для циклического перебора демо-ответов
+let responseIndex = 0;
+
 
 // Инициализация приложения Express
 const app = express();

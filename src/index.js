@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import './styles/global.css';
+import './styles/globals.css';
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import TrialBanner from './components/TrialBanner';

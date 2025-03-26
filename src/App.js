@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase';
-import Auth from './components/Auth';
+import ShadcnAuthForm from './components/ShadcnAuthForm';
+import ShadcnDemo from './components/ShadcnDemo';
 import './styles/App.css';
-import './styles/global.css';
+import './styles/globals.css';
 import ThemeToggle from './components/ThemeToggle';
 import { ThemeProvider } from './contexts/ThemeContext';
+import TrialBanner from './components/TrialBanner';
 
 // Упрощенный компонент сообщения чата
 const ChatMessage = ({ sender, content }) => {
@@ -55,42 +57,41 @@ function App() {
     );
   }
 
-  // Тестовый режим - всегда показываем компонент Auth для тестирования
+  // Показываем демо-страницу Shadcn/UI
   return (
     <ThemeProvider>
-      <div style={{padding: '20px', backgroundColor: '#f0f2f5', minHeight: '100vh'}}>
-        <h1 style={{textAlign: 'center', marginBottom: '20px'}}>OKUUM.AI - Тест аутентификации</h1>
-        <Auth onAuthSuccess={handleAuthSuccess} />
-        
-        {/* Показываем информацию о пользователе, если он аутентифицирован */}
-        {user && (
-          <div style={{
-            marginTop: '20px', 
-            padding: '15px', 
-            backgroundColor: '#e6f7ff', 
-            border: '1px solid #91d5ff', 
-            borderRadius: '5px'
-          }}>
-            <h3>Вы вошли как:</h3>
-            <p><strong>Email:</strong> {user.email || 'Не указан'}</p>
-            <p><strong>Имя:</strong> {user.displayName || 'Не указано'}</p>
-            <p><strong>ID:</strong> {user.uid}</p>
-            <button 
-              onClick={() => auth.signOut()} 
-              style={{
-                backgroundColor: '#ff4d4f', 
-                color: 'white', 
-                border: 'none', 
-                padding: '8px 16px', 
-                borderRadius: '4px', 
-                cursor: 'pointer',
-                marginTop: '10px'
-              }}
-            >
-              Выйти из аккаунта
-            </button>
+      <div className="bg-background min-h-screen">
+        <header className="border-b border-border p-4">
+          <div className="container mx-auto flex justify-between items-center">
+            <h1 className="text-xl font-bold">OKUUM.AI</h1>
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              {user && (
+                <button 
+                  onClick={() => auth.signOut()} 
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Выйти ({user.email})
+                </button>
+              )}
+            </div>
           </div>
-        )}
+        </header>
+        
+        {/* Показываем баннер триала, если пользователь авторизован */}
+        {user && <TrialBanner />}
+        
+        {/* Основное содержимое */}
+        <main>
+          {!user ? (
+            <div className="container mx-auto p-6">
+              <h2 className="text-2xl font-bold text-center mb-6">Войдите в систему</h2>
+              <ShadcnAuthForm onAuthSuccess={handleAuthSuccess} />
+            </div>
+          ) : (
+            <ShadcnDemo />
+          )}
+        </main>
       </div>
     </ThemeProvider>
   );

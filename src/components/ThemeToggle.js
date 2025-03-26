@@ -1,24 +1,49 @@
 import React, { useContext } from 'react';
 import { ThemeContext } from '../contexts/ThemeContext';
-import '../styles/ThemeToggle.css';
+import { cn } from '../lib/utils';
 
 const ThemeToggle = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
   
   return (
     <button 
-      className="theme-toggle"
       onClick={toggleTheme}
+      className={cn(
+        "rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-ring",
+        "transition-colors hover:bg-muted"
+      )}
       aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >
       {theme === 'light' ? (
         // u0418u043au043eu043du043au0430 u043bu0443u043du044b u0434u043bu044f u0442u0451u043cu043du043eu0439 u0442u0435u043cu044b
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-foreground"
+        >
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
         </svg>
       ) : (
         // u0418u043au043eu043du043au0430 u0441u043eu043bu043du0446u0430 u0434u043bu044f u0441u0432u0435u0442u043bu043eu0439 u0442u0435u043cu044b
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-foreground"
+        >
           <circle cx="12" cy="12" r="5"></circle>
           <line x1="12" y1="1" x2="12" y2="3"></line>
           <line x1="12" y1="21" x2="12" y2="23"></line>

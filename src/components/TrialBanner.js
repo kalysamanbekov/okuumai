@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, checkTrialStatus } from '../firebase';
-import '../styles/TrialBanner.css';
+import { Button } from './ui/button';
+import { cn } from '../lib/utils';
 
 const TrialBanner = () => {
   const [trialStatus, setTrialStatus] = useState({
@@ -88,33 +89,39 @@ const TrialBanner = () => {
   // Если триал активен, показываем баннер с таймером
   if (trialStatus.isActive) {
     return (
-      <div className="trial-banner trial-active">
-        <h3>Добро пожаловать в ОРТ Тренажёр!</h3>
-        <p>У вас есть доступ ко всем пробным тестам в течение 24 часов</p>
-        <div className="trial-timer">
-          Осталось времени: {formatTimeRemaining(trialStatus.timeRemaining)}
+      <div className={cn(
+        "p-4 rounded-lg shadow-md bg-primary/10 border border-primary/30 max-w-xl mx-auto my-4",
+        "flex flex-col items-center text-center space-y-3"
+      )}>
+        <h3 className="text-xl font-semibold text-primary">Добро пожаловать в ОРТ Тренажёр!</h3>
+        <p className="text-muted-foreground">У вас есть доступ ко всем пробным тестам в течение 24 часов</p>
+        <div className="font-mono text-lg font-medium bg-primary/5 px-4 py-2 rounded-md">
+          Осталось времени: <span className="text-primary">{formatTimeRemaining(trialStatus.timeRemaining)}</span>
         </div>
-        <button 
-          className="trial-banner-button"
+        <Button 
           onClick={() => window.location.href = '/tests'}
+          className="mt-2"
         >
           Перейти к тестам
-        </button>
+        </Button>
       </div>
     );
   }
   
   // Если триал истёк, показываем баннер с предложением купить доступ
   return (
-    <div className="trial-banner trial-expired">
-      <h3>Пробный доступ завершён</h3>
-      <p>Активируйте полный доступ к тренажёру!</p>
-      <button 
-        className="trial-banner-button"
+    <div className={cn(
+      "p-4 rounded-lg shadow-md bg-destructive/10 border border-destructive/30 max-w-xl mx-auto my-4",
+      "flex flex-col items-center text-center space-y-3"
+    )}>
+      <h3 className="text-xl font-semibold text-destructive">Пробный доступ завершён</h3>
+      <p className="text-muted-foreground">Активируйте полный доступ к тренажёру!</p>
+      <Button 
+        variant="secondary"
         onClick={() => window.location.href = '/payment'}
       >
         Купить доступ за 890 сом
-      </button>
+      </Button>
     </div>
   );
 };
