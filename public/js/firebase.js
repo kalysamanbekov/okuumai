@@ -112,16 +112,13 @@ const createUserProfile = async (user) => {
   const userSnap = await getDoc(userRef);
   
   if (!userSnap.exists()) {
-    // Если пользователь новый, создаем запись и активируем триал
+    // Если пользователь новый, создаем запись
     const userData = {
       email: user.email,
       displayName: user.displayName || '',
       photoURL: user.photoURL || '',
       createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
-      // Данные для триала
-      trial_active: true,
-      trial_started_at: serverTimestamp()
+      lastLogin: serverTimestamp()
     };
     
     await setDoc(userRef, userData);
@@ -149,45 +146,7 @@ const getUserData = async (userId) => {
   }
 };
 
-// Проверка статуса триала пользователя
-const checkTrialStatus = async (userId) => {
-  try {
-    const { userData, error } = await getUserData(userId);
-    
-    if (error || !userData) {
-      return { isActive: false, timeLeft: 0, error: error || "Данные пользователя не найдены" };
-    }
-    
-    // Если триал не был активирован
-    if (!userData.trial_active || !userData.trial_started_at) {
-      return { isActive: false, timeLeft: 0, error: null };
-    }
-    
-    // Получаем время начала триала
-    const trialStartedAt = userData.trial_started_at.toDate();
-    const now = new Date();
-    
-    // Вычисляем разницу в миллисекундах
-    const trialDuration = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
-    const elapsedTime = now.getTime() - trialStartedAt.getTime();
-    const timeLeft = trialDuration - elapsedTime;
-    
-    // Проверяем, не истек ли триал
-    if (timeLeft <= 0) {
-      // Обновляем статус триала в Firestore
-      await updateDoc(doc(db, "users", userId), {
-        trial_active: false
-      });
-      
-      return { isActive: false, timeLeft: 0, error: null };
-    }
-    
-    return { isActive: true, timeLeft, error: null };
-  } catch (error) {
-    console.error("Ошибка при проверке статуса триала:", error);
-    return { isActive: false, timeLeft: 0, error };
-  }
-};
+
 
 // Загрузка скриншота об оплате
 const uploadPaymentScreenshot = async (userId, file) => {
@@ -248,7 +207,6 @@ export {
   resetPassword,
   createUserProfile,
   getUserData,
-  checkTrialStatus,
   uploadPaymentScreenshot,
   submitPaymentInfo
 };

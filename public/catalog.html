@@ -242,75 +242,77 @@
         font-size: 1.5rem;
         margin: 20px 0 15px;
       }
+      
+      .promo-banner {
+        padding: 15px;
+        margin: 15px;
+      }
+      
+      .promo-title {
+        font-size: 1.2rem;
+      }
+      
+      .promo-text {
+        font-size: 0.9rem;
+      }
+    }
+    
+    /* Стили для промо-баннера */
+    .promo-banner {
+      background: linear-gradient(135deg, #5e35b1, #3949ab);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px auto;
+      max-width: 900px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .promo-banner-content {
+      text-align: center;
+    }
+    
+    .promo-title {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #ffffff;
+    }
+    
+    .promo-text {
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    
+    .promo-button {
+      display: inline-block;
+      background-color: #4CAF50;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    
+    .promo-button:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
 <body>
-  <!-- Контейнер для баннера триала -->
-  <div id="trial-banner-container"></div>
-  <!-- Скрипт для проверки аутентификации -->
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
-    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js';
-    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
-    
-    // Конфигурация Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyChyT-UwWG1dqh3j_kOoeWbpJ0i6hVwHhk",
-      authDomain: "okkumai.firebaseapp.com",
-      projectId: "okkumai",
-      storageBucket: "okkumai.firebasestorage.app",
-      messagingSenderId: "517438098193",
-      appId: "1:517438098193:web:20d1d96ebb705956fedab0",
-      measurementId: "G-94J67BQ8N4"
-    };
-    
-    // Инициализация Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    
-    // Проверка аутентификации
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        // Пользователь не аутентифицирован, перенаправляем на страницу входа
-        window.location.href = '/login.html';
-      } else {
-        // Пользователь аутентифицирован, показываем содержимое страницы
-        document.getElementById('page-content').style.display = 'block';
-        
-        // Отображаем имя пользователя в шапке
-        const userDisplayName = user.displayName || user.email.split('@')[0];
-        document.getElementById('user-name').textContent = userDisplayName;
-        
-        // Проверяем статус триала пользователя
-        try {
-          const userRef = doc(db, 'users', user.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (userSnap.exists()) {
-            const userData = userSnap.data();
-            console.log('Данные пользователя:', userData);
-            
-            // Если у пользователя нет записи о триале, создаем её
-            if (userData.trial_started_at === undefined) {
-              console.log('Информация о триале не найдена, инициализируем триал');
-              // Эта логика обрабатывается в Firebase.js при регистрации
-            }
-          }
-        } catch (error) {
-          console.error('Ошибка при проверке статуса триала:', error);
-        }
-        
-        // Настраиваем кнопку выхода
-        document.getElementById('logout-button').addEventListener('click', () => {
-          auth.signOut().then(() => {
-            window.location.href = '/login.html';
-          });
-        });
-      }
-    });
-  </script>
+  <!-- Баннер с ограниченным предложением -->
+  <div class="promo-banner">
+    <div class="promo-banner-content">
+      <h2 class="promo-title">Всего 24 часа!</h2>
+      <p class="promo-text">Попробуйте бесплатно ИИ-тренажёр для подготовки к ОРТ и увеличьте свои шансы на высокий балл.</p>
+      <a href="payment.html" class="promo-button">Продлить доступ</a>
+    </div>
+  </div>
+
+  <!-- Скрипт для проверки аутентификации перенесен в отдельный модуль -->
+  <script type="module" src="js/catalog-auth.js"></script>
   
   <!-- Содержимое страницы (изначально скрыто) -->
   <div id="page-content" style="display: none;">
@@ -325,8 +327,6 @@
     </div>
   
   <div class="container">
-    <!-- Контейнер для баннера триала -->
-    <div id="trial-banner-container"></div>
     
     <h1 class="page-title">Подготовка к ОРТ</h1>
     
