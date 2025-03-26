@@ -11,10 +11,11 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
   <!-- Подключаем Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -178,6 +179,69 @@
     // Состояние формы (вход или регистрация)
     let isLogin = false; // По умолчанию показываем регистрацию
     
+    // Функция для входа с email и паролем
+    const loginWithEmailAndPassword = async (email, password) => {
+      try {
+        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+        return { user: userCredential.user, error: null };
+      } catch (error) {
+        return { user: null, error };
+      }
+    };
+    
+    // Функция для регистрации с email и паролем
+    const registerWithEmailAndPassword = async (email, password) => {
+      try {
+        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        // Создаем профиль пользователя и активируем триал
+        await createUserProfile(userCredential.user);
+        return { user: userCredential.user, error: null };
+      } catch (error) {
+        return { user: null, error };
+      }
+    };
+    
+    // Функция для входа через Google
+    const signInWithGoogle = async () => {
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await firebase.auth().signInWithRedirect(provider);
+        return { error: null };
+      } catch (error) {
+        return { error };
+      }
+    };
+    
+    // Создание профиля пользователя в Firestore
+    const createUserProfile = async (user) => {
+      if (!user) return;
+      
+      const db = firebase.firestore();
+      const userRef = db.collection('users').doc(user.uid);
+      const userSnap = await userRef.get();
+      
+      if (!userSnap.exists) {
+        // Если пользователь новый, создаем запись и активируем триал
+        const userData = {
+          email: user.email,
+          displayName: user.displayName || '',
+          photoURL: user.photoURL || '',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+          // Данные для триала
+          trial_active: true,
+          trial_started_at: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await userRef.set(userData);
+      } else {
+        // Если пользователь уже существует, обновляем время последнего входа
+        await userRef.update({
+          lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    };
+    
     // Функция для отображения ошибок
     const showError = (message) => {
       errorMessage.textContent = message;
@@ -212,6 +276,33 @@
       clearError();
     });
     
+    // Проверяем результат перенаправления при загрузке страницы
+    firebase.auth().getRedirectResult().then((result) => {
+      if (result.user) {
+        // Успешный вход через Google
+        createUserProfile(result.user).then(() => {
+          window.location.href = 'catalog.html';
+        });
+      }
+    }).catch((error) => {
+      if (error.code !== 'auth/credential-already-in-use') {
+        showError(`Ошибка входа через Google: ${error.message}`);
+      }
+    });
+    
+    // Обработчик для кнопки входа через Google
+    googleButton.addEventListener('click', async (e) => {
+      e.preventDefault();
+      clearError();
+      
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await firebase.auth().signInWithRedirect(provider);
+      } catch (error) {
+        showError(`Ошибка входа через Google: ${error.message}`);
+      }
+    });
+    
     // Обработка отправки формы
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -223,20 +314,20 @@
       try {
         if (isLogin) {
           // Вход пользователя
-          const { success, error } = await loginWithEmailAndPassword(email, password);
-          if (!success) {
-            throw new Error(error);
+          const result = await loginWithEmailAndPassword(email, password);
+          if (result.error) {
+            throw new Error(result.error.message);
           }
           console.log('Пользователь успешно вошел в систему');
-          window.location.href = '/catalog.html';
+          window.location.href = 'catalog.html';
         } else {
           // Регистрация пользователя
-          const { success, error } = await registerWithEmailAndPassword(email, password);
-          if (!success) {
-            throw new Error(error);
+          const result = await registerWithEmailAndPassword(email, password);
+          if (result.error) {
+            throw new Error(result.error.message);
           }
           console.log('Пользователь успешно зарегистрирован');
-          window.location.href = '/catalog.html';
+          window.location.href = 'catalog.html';
         }
       } catch (error) {
         console.error('Ошибка аутентификации:', error);
