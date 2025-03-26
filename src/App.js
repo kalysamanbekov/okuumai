@@ -3,6 +3,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase';
 import ShadcnAuthForm from './components/ShadcnAuthForm';
 import ShadcnDemo from './components/ShadcnDemo';
+import RadixDemo from './components/RadixDemo';
 import './styles/App.css';
 import './styles/globals.css';
 import ThemeToggle from './components/ThemeToggle';
@@ -89,7 +90,10 @@ function App() {
               <ShadcnAuthForm onAuthSuccess={handleAuthSuccess} />
             </div>
           ) : (
-            <ShadcnDemo />
+            <div>
+              <RadixDemo />
+              <ShadcnDemo />
+            </div>
           )}
         </main>
       </div>
