@@ -7,18 +7,20 @@ require('dotenv').config();
 // Инициализация OpenAI API
 const OpenAI = require('openai');
 
+// Переменная для хранения экземпляра OpenAI
+let openai = null;
+
 // Проверка наличия API ключа
 if (!process.env.OPENAI_API_KEY) {
   console.warn('ВНИМАНИЕ: OPENAI_API_KEY не найден в переменных окружения. Используется демо-режим.');
   console.log('Запуск в демонстрационном режиме без API OpenAI');
 } else {
   console.log('OpenAI API ключ найден. Запуск с полной функциональностью.');
+  // Инициализация OpenAI клиента только если есть ключ
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
 }
-
-// Инициализация OpenAI клиента
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 
 // Демо-данные для имитации ответов чата
@@ -35,13 +37,11 @@ let responseIndex = 0;
 
 // Карта соответствия material_id и assistant_id для OpenAI Assistants API
 const ASSISTANTS_MAP = {
-  'test_full': 'asst_abc123', // Тестовый ассистент для полного курса
-  'math': 'asst_def456', // Ассистент по математике
-  'logic': 'asst_ghi789', // Ассистент по логике
-  'physics': 'asst_jkl012', // Ассистент по физике
-  'chemistry': 'asst_mno345', // Ассистент по химии
-  'biology': 'asst_pqr678', // Ассистент по биологии
-  'history': 'asst_stu901' // Ассистент по истории
+  'test_full': 'asst_NDIJTricZzQXUHcRH01NRoLW', // Пробное тестирование в формате ОРТ
+  'trainer_math1': 'asst_7od30lZQMDMo6xTbVZ9yUZ0K', // Математика 1 (базовые математические навыки)
+  'trainer_math2': 'asst_k4AUnwgcryTCBzX3W4EPH3ee', // Математика 2 (продвинутые математические задачи)
+  'trainer_analogies': 'asst_wOilQhPJD7czTvXoAfAlX0Wa', // Аналогии и дополнения
+  'trainer_reading': 'asst_PcxUJ4NlKDvFxpw8iqydcSj9' // Чтение и понимание текста
 };
 
 
@@ -160,6 +160,24 @@ app.post('/api/chat', async (req, res) => {
   }
   
   try {
+    // Проверяем, инициализирован ли OpenAI клиент
+    if (!openai) {
+      console.log('OpenAI клиент не инициализирован, используем демо-режим');
+      // Выбираем случайный ответ из демо-данных
+      const demoResponse = DEMO_RESPONSES[responseIndex];
+      responseIndex = (responseIndex + 1) % DEMO_RESPONSES.length;
+      
+      return res.json({
+        message: {
+          role: 'assistant',
+          content: demoResponse
+        },
+        id: `demo-${Date.now()}`,
+        model: 'demo-model',
+        usage: { total_tokens: 20 }
+      });
+    }
+    
     console.log('Подготовка запроса к OpenAI API...');
     // Добавляем системное сообщение, если его нет
     const messages = [...req.body.messages];
@@ -198,6 +216,11 @@ app.post('/api/chat', async (req, res) => {
 
 // Модуль для работы с OpenAI Assistant API
 const assistantModule = {
+  // Проверка доступности OpenAI API
+  isAvailable: () => {
+    return !!openai;
+  },
+  
   // Получение assistant_id по material_id
   getAssistantId: (materialId) => {
     const assistantId = ASSISTANTS_MAP[materialId];
@@ -209,6 +232,11 @@ const assistantModule = {
   
   // Получение или создание thread для пользователя
   getOrCreateThread: async (userId, materialId) => {
+    // Проверяем, инициализирован ли OpenAI клиент
+    if (!openai) {
+      throw new Error('OpenAI клиент не инициализирован');
+    }
+    
     // Используем комбинацию userId и materialId как ключ
     // чтобы у каждого пользователя был отдельный thread для каждого типа материала
     const threadKey = `${userId}_${materialId}`;
@@ -225,6 +253,11 @@ const assistantModule = {
   
   // Добавление сообщения пользователя в thread
   addUserMessage: async (threadId, message) => {
+    // Проверяем, инициализирован ли OpenAI клиент
+    if (!openai) {
+      throw new Error('OpenAI клиент не инициализирован');
+    }
+    
     return await openai.beta.threads.messages.create(threadId, {
       role: 'user',
       content: message
@@ -233,6 +266,11 @@ const assistantModule = {
   
   // Запуск run с определенным assistant_id
   runAssistant: async (threadId, assistantId) => {
+    // Проверяем, инициализирован ли OpenAI клиент
+    if (!openai) {
+      throw new Error('OpenAI клиент не инициализирован');
+    }
+    
     console.log(`[DEBUG] Отправка запроса к ассистенту с ID: ${assistantId}`);
     return await openai.beta.threads.runs.create(threadId, {
       assistant_id: assistantId
@@ -241,6 +279,11 @@ const assistantModule = {
   
   // Ожидание завершения run
   waitForRunCompletion: async (threadId, runId) => {
+    // Проверяем, инициализирован ли OpenAI клиент
+    if (!openai) {
+      throw new Error('OpenAI клиент не инициализирован');
+    }
+    
     let runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
     
     // Проверяем статус каждые 500 мс
@@ -255,6 +298,11 @@ const assistantModule = {
   
   // Получение последнего ответа ассистента
   getLatestAssistantReply: async (threadId) => {
+    // Проверяем, инициализирован ли OpenAI клиент
+    if (!openai) {
+      throw new Error('OpenAI клиент не инициализирован');
+    }
+    
     const messages = await openai.beta.threads.messages.list(threadId);
     
     // Находим последнее сообщение от ассистента
@@ -280,16 +328,10 @@ const assistantModule = {
   }
 };
 
-// Новый endpoint для работы с OpenAI Assistant API на основе material_id
+// Endpoint для работы с OpenAI Assistant API на основе material_id
 app.post('/chat', async (req, res) => {
   console.log('Получен запрос к /chat');
   
-  // Проверка наличия API ключа
-  if (!process.env.OPENAI_API_KEY) {
-    console.error('ОШИБКА: OPENAI_API_KEY отсутствует');
-    return res.status(500).json({ reply: 'Ошибка сервера: API ключ отсутствует' });
-  }
-
   // Проверка наличия необходимых полей в запросе
   if (!req.body.message || typeof req.body.message !== 'string') {
     console.error('Ошибка в формате запроса: отсутствует поле message');
@@ -301,10 +343,23 @@ app.post('/chat', async (req, res) => {
     return res.status(400).json({ reply: 'Ошибка в формате запроса: отсутствует поле material_id' });
   }
   
+  // Получаем данные из запроса
+  const { message, material_id } = req.body;
+  console.log(`Сообщение пользователя для материала ${material_id}:`, message);
+  
+  // Проверка наличия API ключа - если отсутствует, используем демо-режим
+  if (!process.env.OPENAI_API_KEY || !openai) {
+    console.warn('ВНИМАНИЕ: OPENAI_API_KEY отсутствует или OpenAI клиент не инициализирован');
+    console.log('Используем демо-режим для ответа');
+    
+    // Выбираем случайный ответ из демо-данных
+    const demoResponse = DEMO_RESPONSES[responseIndex];
+    responseIndex = (responseIndex + 1) % DEMO_RESPONSES.length;
+    
+    return res.json({ reply: `[ДЕМО-РЕЖИМ] ${demoResponse}` });
+  }
+
   try {
-    // Получаем данные из запроса
-    const { message, material_id } = req.body;
-    console.log(`Сообщение пользователя для материала ${material_id}:`, message);
     
     // Получаем assistant_id по material_id
     let assistantId;
