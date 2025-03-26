@@ -37,10 +37,14 @@ const TrialBanner = () => {
       }
       
       try {
-        const { isActive, timeRemaining, error } = await checkTrialStatus(user.uid);
+        // Получаем данные о триале из обновленной функции checkTrialStatus
+        const { trialActive, timeLeft, formattedTimeLeft, error } = await checkTrialStatus(user.uid);
+        
+        console.log('Получены данные о триале:', { trialActive, timeLeft, formattedTimeLeft });
+        
         setTrialStatus({
-          isActive,
-          timeRemaining,
+          isActive: trialActive,
+          timeRemaining: timeLeft, // Теперь это время в миллисекундах
           loading: false,
           error
         });

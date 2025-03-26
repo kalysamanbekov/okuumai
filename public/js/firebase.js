@@ -176,12 +176,32 @@ const checkTrialStatus = async (userId) => {
       if (localData) {
         // Вычисляем оставшееся время на основе локальных данных
         if (localData.trialActive) {
-          return { 
-            trialActive: true, 
-            timeLeft: localData.timeLeft || '23:59:59',
-            isPremium: false,
-            error: null 
-          };
+          // Проверяем, есть ли timeLeftMs в локальных данных
+          if (localData.timeLeftMs) {
+            return { 
+              trialActive: true, 
+              timeLeft: localData.timeLeftMs, // Используем миллисекунды
+              formattedTimeLeft: localData.timeLeft || '23:59:59', // Для обратной совместимости
+              isPremium: false,
+              error: null 
+            };
+          } else {
+            // Для обратной совместимости со старыми данными
+            // Преобразуем строку времени в миллисекунды
+            const timeParts = (localData.timeLeft || '23:59:59').split(':');
+            const hours = parseInt(timeParts[0]);
+            const minutes = parseInt(timeParts[1]);
+            const seconds = parseInt(timeParts[2]);
+            const timeLeftMs = (hours * 60 * 60 + minutes * 60 + seconds) * 1000;
+            
+            return { 
+              trialActive: true, 
+              timeLeft: timeLeftMs,
+              formattedTimeLeft: localData.timeLeft || '23:59:59',
+              isPremium: false,
+              error: null 
+            };
+          }
         } else {
           return { trialActive: false, error: null };
         }
@@ -189,15 +209,19 @@ const checkTrialStatus = async (userId) => {
       
       // Если нет ни данных из Firestore, ни локальных данных, создаем новый триал
       const defaultTimeLeft = '23:59:59';
+      const defaultTimeLeftMs = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
+      
       localStorage.setItem(`trial_${userId}`, JSON.stringify({
         trialActive: true,
         timeLeft: defaultTimeLeft,
+        timeLeftMs: defaultTimeLeftMs,
         trialStartedAt: new Date().toISOString()
       }));
       
       return { 
         trialActive: true, 
-        timeLeft: defaultTimeLeft,
+        timeLeft: defaultTimeLeftMs, // Возвращаем время в миллисекундах
+        formattedTimeLeft: defaultTimeLeft, // Добавляем форматированное время
         isPremium: false,
         error: null 
       };
@@ -232,25 +256,29 @@ const checkTrialStatus = async (userId) => {
       return { trialActive: false, error: null };
     }
     
-    // Вычисляем оставшееся время триала
-    const timeLeft = trialDuration - timeDiff;
-    const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
-    const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-    const secondsLeft = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    // Вычисляем оставшееся время триала в миллисекундах
+    const timeLeftMs = trialDuration - timeDiff;
     
-    // Форматируем оставшееся время
+    // Также форматируем для localStorage и отладки
+    const hoursLeft = Math.floor(timeLeftMs / (1000 * 60 * 60));
+    const minutesLeft = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
+    const secondsLeft = Math.floor((timeLeftMs % (1000 * 60)) / 1000);
+    
+    // Форматируем оставшееся время для отображения
     const formattedTimeLeft = `${hoursLeft.toString().padStart(2, '0')}:${minutesLeft.toString().padStart(2, '0')}:${secondsLeft.toString().padStart(2, '0')}`;
     
     // Сохраняем данные в localStorage для офлайн-режима
     localStorage.setItem(`trial_${userId}`, JSON.stringify({
       trialActive: true,
       timeLeft: formattedTimeLeft,
+      timeLeftMs: timeLeftMs,
       trialStartedAt: trialStartedAt.toISOString()
     }));
     
     return { 
       trialActive: true, 
-      timeLeft: formattedTimeLeft,
+      timeLeft: timeLeftMs, // Возвращаем время в миллисекундах
+      formattedTimeLeft: formattedTimeLeft, // Добавляем форматированное время для обратной совместимости
       error: null 
     };
   } catch (error) {
