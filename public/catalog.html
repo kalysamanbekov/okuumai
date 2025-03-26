@@ -50,6 +50,33 @@
       z-index: 100;
     }
     
+    /* Стили для информации о пользователе */
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    #user-name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    
+    .logout-btn {
+      background-color: var(--error-color);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+    
+    .logout-btn:hover {
+      opacity: 0.9;
+    }
+    
     .logo {
       font-size: 1.5rem;
       font-weight: bold;
@@ -219,9 +246,60 @@
   </style>
 </head>
 <body>
-  <div class="header">
-    <a href="/" class="logo">OKUUM.AI</a>
-  </div>
+  <!-- Скрипт для проверки аутентификации -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js';
+    
+    // Конфигурация Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyChyT-UwWG1dqh3j_kOoeWbpJ0i6hVwHhk",
+      authDomain: "okkumai.firebaseapp.com",
+      projectId: "okkumai",
+      storageBucket: "okkumai.firebasestorage.app",
+      messagingSenderId: "517438098193",
+      appId: "1:517438098193:web:20d1d96ebb705956fedab0",
+      measurementId: "G-94J67BQ8N4"
+    };
+    
+    // Инициализация Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    
+    // Проверка аутентификации
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        // Пользователь не аутентифицирован, перенаправляем на страницу входа
+        window.location.href = '/login.html';
+      } else {
+        // Пользователь аутентифицирован, показываем содержимое страницы
+        document.getElementById('page-content').style.display = 'block';
+        
+        // Отображаем имя пользователя в шапке
+        const userDisplayName = user.displayName || user.email.split('@')[0];
+        document.getElementById('user-name').textContent = userDisplayName;
+        
+        // Настраиваем кнопку выхода
+        document.getElementById('logout-button').addEventListener('click', () => {
+          auth.signOut().then(() => {
+            window.location.href = '/login.html';
+          });
+        });
+      }
+    });
+  </script>
+  
+  <!-- Содержимое страницы (изначально скрыто) -->
+  <div id="page-content" style="display: none;">
+    <div class="header">
+      <a href="/" class="logo">OKUUM.AI</a>
+      
+      <!-- Добавляем информацию о пользователе и кнопку выхода -->
+      <div class="user-info">
+        <span id="user-name"></span>
+        <button id="logout-button" class="logout-btn">Выйти</button>
+      </div>
+    </div>
   
   <div class="container">
     <h1 class="page-title">Подготовка к ОРТ</h1>
@@ -283,6 +361,9 @@
         </div>
       </div>
     </div>
+  </div>
+  
+  <!-- Закрываем div с id="page-content" -->
   </div>
   
   <script>

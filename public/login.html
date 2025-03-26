@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OKUUM.AI - Авторизация</title>
+  <link rel="icon" href="favicon.ico" />
+  <meta name="description" content="OKUUM.AI - образовательная платформа с искусственным интеллектом" />
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    #auth-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      color: #2563eb;
+      margin-bottom: 10px;
+    }
+    .auth-card {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    .google-button {
+      background-color: white;
+      color: #333;
+      border: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 15px;
+    }
+    .google-button img {
+      width: 20px;
+      margin-right: 10px;
+    }
+    .toggle-form {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    .toggle-form a {
+      color: #2563eb;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .error-message {
+      color: #dc2626;
+      margin-top: 15px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="auth-container">
+    <div class="header">
+      <h1>OKUUM.AI</h1>
+      <p>Образовательная платформа с искусственным интеллектом</p>
+    </div>
+    
+    <div class="auth-card">
+      <h2 id="form-title">Регистрация</h2>
+      
+      <div id="error-message" class="error-message" style="display: none;"></div>
+      
+      <form id="auth-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="Введите ваш email" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Пароль</label>
+          <input type="password" id="password" placeholder="Введите ваш пароль" required>
+        </div>
+        
+        <button type="submit" id="submit-button">Создать аккаунт</button>
+      </form>
+      
+      <button class="google-button" id="google-button">
+        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
+        Войти с помощью Google
+      </button>
+      
+      <div class="toggle-form">
+        <span id="toggle-text">Уже есть аккаунт?</span> 
+        <a id="toggle-link">Войти</a>
+      </div>
+      
+      <div class="forgot-password" id="forgot-password" style="display: none; text-align: center; margin-top: 15px;">
+        <a href="/forgot-password.html">Забыли пароль?</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Импортируем Firebase
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js';
+    
+    // Конфигурация Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyChyT-UwWG1dqh3j_kOoeWbpJ0i6hVwHhk",
+      authDomain: "okkumai.firebaseapp.com",
+      projectId: "okkumai",
+      storageBucket: "okkumai.firebasestorage.app",
+      messagingSenderId: "517438098193",
+      appId: "1:517438098193:web:20d1d96ebb705956fedab0",
+      measurementId: "G-94J67BQ8N4"
+    };
+    
+    // Инициализация Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const googleProvider = new GoogleAuthProvider();
+    
+    // Получаем элементы DOM
+    const authForm = document.getElementById('auth-form');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const submitButton = document.getElementById('submit-button');
+    const googleButton = document.getElementById('google-button');
+    const toggleLink = document.getElementById('toggle-link');
+    const toggleText = document.getElementById('toggle-text');
+    const formTitle = document.getElementById('form-title');
+    const errorMessage = document.getElementById('error-message');
+    
+    // Состояние формы (вход или регистрация)
+    let isLogin = false; // По умолчанию показываем регистрацию
+    
+    // Функция для отображения ошибок
+    const showError = (message) => {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    };
+    
+    // Функция для очистки ошибок
+    const clearError = () => {
+      errorMessage.textContent = '';
+      errorMessage.style.display = 'none';
+    };
+    
+    // Переключение между формами входа и регистрации
+    toggleLink.addEventListener('click', () => {
+      isLogin = !isLogin;
+      const forgotPasswordLink = document.getElementById('forgot-password');
+      
+      if (isLogin) {
+        formTitle.textContent = 'Вход в систему';
+        submitButton.textContent = 'Войти';
+        toggleText.textContent = 'Нет аккаунта?';
+        toggleLink.textContent = 'Зарегистрироваться';
+        forgotPasswordLink.style.display = 'block'; // Показываем ссылку на восстановление пароля на форме входа
+      } else {
+        formTitle.textContent = 'Регистрация';
+        submitButton.textContent = 'Создать аккаунт';
+        toggleText.textContent = 'Уже есть аккаунт?';
+        toggleLink.textContent = 'Войти';
+        forgotPasswordLink.style.display = 'none'; // Скрываем ссылку на форме регистрации
+      }
+      
+      clearError();
+    });
+    
+    // Обработка отправки формы
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+      
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      
+      try {
+        if (isLogin) {
+          // Вход пользователя
+          await signInWithEmailAndPassword(auth, email, password);
+          console.log('Пользователь успешно вошел в систему');
+          window.location.href = '/catalog.html';
+        } else {
+          // Регистрация пользователя
+          await createUserWithEmailAndPassword(auth, email, password);
+          console.log('Пользователь успешно зарегистрирован');
+          window.location.href = '/catalog.html';
+        }
+      } catch (error) {
+        console.error('Ошибка аутентификации:', error);
+        
+        // Обработка ошибок аутентификации
+        switch (error.code) {
+          case 'auth/invalid-email':
+            showError('Неверный формат email');
+            break;
+          case 'auth/user-disabled':
+            showError('Этот аккаунт отключен');
+            break;
+          case 'auth/user-not-found':
+            showError('Пользователь с таким email не найден');
+            break;
+          case 'auth/wrong-password':
+            showError('Неверный пароль');
+            break;
+          case 'auth/email-already-in-use':
+            showError('Этот email уже используется');
+            break;
+          case 'auth/weak-password':
+            showError('Слишком простой пароль. Используйте не менее 6 символов');
+            break;
+          default:
+            showError('Произошла ошибка при аутентификации: ' + error.message);
+        }
+      }
+    });
+    
+    // Инициализация ссылки на восстановление пароля
+    document.getElementById('forgot-password').style.display = 'none';
+    
+    // Вход через Google
+    // Проверяем результат перенаправления при загрузке страницы
+    window.addEventListener('load', async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          // Успешная аутентификация через Google
+          window.location.href = '/catalog.html';
+        }
+      } catch (error) {
+        showError('Ошибка входа через Google: ' + error.message);
+      }
+    });
+    
+    googleButton.addEventListener('click', async () => {
+      clearError();
+      
+      try {
+        // Используем перенаправление вместо всплывающего окна
+        await signInWithRedirect(auth, googleProvider);
+        console.log('Пользователь успешно вошел через Google');
+        window.location.href = '/catalog.html';
+      } catch (error) {
+        console.error('Ошибка входа через Google:', error);
+        showError('Ошибка входа через Google: ' + error.message);
+      }
+    });
+    
+    // Проверка состояния аутентификации
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        console.log('Пользователь аутентифицирован:', user);
+      } else {
+        console.log('Пользователь не аутентифицирован');
+      }
+    });
+  </script>
+</body>
+</html>
