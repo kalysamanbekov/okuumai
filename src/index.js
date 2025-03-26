@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/globals.css';
+import "@radix-ui/themes/styles.css";
+import { Theme } from "@radix-ui/themes";
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import TrialBanner from './components/TrialBanner';
@@ -41,9 +43,11 @@ if (!container) {
   try {
     root.render(
     <React.StrictMode>
-      <ThemeProvider>
-        <App />
-      </ThemeProvider>
+      <Theme>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </Theme>
     </React.StrictMode>
   );
   console.log('Приложение успешно отрендерено');
