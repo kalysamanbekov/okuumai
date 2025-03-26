@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './styles/global.css';
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
+import TrialBanner from './components/TrialBanner';
 
 // Простой компонент для отображения в случае ошибки
 const ErrorFallback = ({ error }) => (
@@ -55,4 +56,21 @@ if (!container) {
     </React.StrictMode>
   );
 }
+}
+
+// Инициализация баннера триала на HTML-страницах
+const trialBannerContainer = document.getElementById('trial-banner-container');
+if (trialBannerContainer) {
+  console.log('Инициализация баннера триала');
+  try {
+    const trialBannerRoot = createRoot(trialBannerContainer);
+    trialBannerRoot.render(
+      <React.StrictMode>
+        <TrialBanner />
+      </React.StrictMode>
+    );
+    console.log('Баннер триала успешно инициализирован');
+  } catch (error) {
+    console.error('Ошибка инициализации баннера триала:', error);
+  }
 }

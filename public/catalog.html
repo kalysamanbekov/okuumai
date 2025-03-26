@@ -250,6 +250,7 @@
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js';
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
     
     // Конфигурация Firebase
     const firebaseConfig = {
@@ -265,9 +266,10 @@
     // Инициализация Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
     
     // Проверка аутентификации
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       if (!user) {
         // Пользователь не аутентифицирован, перенаправляем на страницу входа
         window.location.href = '/login.html';
@@ -278,6 +280,25 @@
         // Отображаем имя пользователя в шапке
         const userDisplayName = user.displayName || user.email.split('@')[0];
         document.getElementById('user-name').textContent = userDisplayName;
+        
+        // Проверяем статус триала пользователя
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            console.log('Данные пользователя:', userData);
+            
+            // Если у пользователя нет записи о триале, создаем её
+            if (userData.trial_started_at === undefined) {
+              console.log('Информация о триале не найдена, инициализируем триал');
+              // Эта логика обрабатывается в Firebase.js при регистрации
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка при проверке статуса триала:', error);
+        }
         
         // Настраиваем кнопку выхода
         document.getElementById('logout-button').addEventListener('click', () => {
@@ -302,6 +323,9 @@
     </div>
   
   <div class="container">
+    <!-- Контейнер для баннера триала -->
+    <div id="trial-banner-container"></div>
+    
     <h1 class="page-title">Подготовка к ОРТ</h1>
     
     <!-- Секция тестирования -->
@@ -369,5 +393,10 @@
   <script>
     // Можно добавить дополнительную логику JavaScript при необходимости
   </script>
+  <!-- Подключаем стили для баннера триала -->
+  <link rel="stylesheet" href="css/TrialBanner.css">
+  
+  <!-- Подключаем скрипт с баннером триала -->
+  <script src="js/index.js" type="module"></script>
 </body>
 </html>

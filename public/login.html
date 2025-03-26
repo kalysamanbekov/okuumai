@@ -6,6 +6,15 @@
   <title>OKUUM.AI - Авторизация</title>
   <link rel="icon" href="favicon.ico" />
   <meta name="description" content="OKUUM.AI - образовательная платформа с искусственным интеллектом" />
+  <!-- Подключаем React и ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Подключаем Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -139,12 +148,8 @@
     </div>
   </div>
 
-  <script type="module">
-    // Импортируем Firebase
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js';
-    
-    // Конфигурация Firebase
+  <script>
+    // Инициализируем Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyChyT-UwWG1dqh3j_kOoeWbpJ0i6hVwHhk",
       authDomain: "okkumai.firebaseapp.com",
@@ -156,9 +161,8 @@
     };
     
     // Инициализация Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const googleProvider = new GoogleAuthProvider();
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     
     // Получаем элементы DOM
     const authForm = document.getElementById('auth-form');
@@ -219,12 +223,18 @@
       try {
         if (isLogin) {
           // Вход пользователя
-          await signInWithEmailAndPassword(auth, email, password);
+          const { success, error } = await loginWithEmailAndPassword(email, password);
+          if (!success) {
+            throw new Error(error);
+          }
           console.log('Пользователь успешно вошел в систему');
           window.location.href = '/catalog.html';
         } else {
           // Регистрация пользователя
-          await createUserWithEmailAndPassword(auth, email, password);
+          const { success, error } = await registerWithEmailAndPassword(email, password);
+          if (!success) {
+            throw new Error(error);
+          }
           console.log('Пользователь успешно зарегистрирован');
           window.location.href = '/catalog.html';
         }
@@ -264,20 +274,11 @@
     // Проверяем результат перенаправления при загрузке страницы
     window.addEventListener('load', async () => {
       try {
-        console.log('Проверяем результат перенаправления...');
-        const result = await getRedirectResult(auth);
-        console.log('Результат перенаправления:', result);
-        
-        if (result && result.user) {
-          console.log('Успешная аутентификация через Google:', result.user);
-          // Добавляем небольшую задержку перед перенаправлением
-          setTimeout(() => {
-            window.location.href = '/catalog.html';
-          }, 500);
-        }
+        // Проверка результата перенаправления обрабатывается в firebase.js
+        console.log('Страница загружена');
       } catch (error) {
-        console.error('Ошибка при обработке перенаправления:', error);
-        showError('Ошибка входа через Google: ' + error.message);
+        console.error('Ошибка при загрузке страницы:', error);
+        showError('Произошла ошибка: ' + error.message);
       }
     });
     
@@ -285,10 +286,12 @@
       clearError();
       
       try {
-        // Используем перенаправление вместо всплывающего окна
-        await signInWithRedirect(auth, googleProvider);
-        console.log('Пользователь успешно вошел через Google');
-        window.location.href = '/catalog.html';
+        // Используем нашу функцию для входа через Google
+        const { success, error } = await signInWithGoogle();
+        if (!success) {
+          throw new Error(error);
+        }
+        console.log('Начат процесс входа через Google');
       } catch (error) {
         console.error('Ошибка входа через Google:', error);
         showError('Ошибка входа через Google: ' + error.message);
