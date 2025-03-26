@@ -246,6 +246,8 @@
   </style>
 </head>
 <body>
+  <!-- Контейнер для баннера триала -->
+  <div id="trial-banner-container"></div>
   <!-- Скрипт для проверки аутентификации -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
@@ -395,6 +397,10 @@
   </script>
   <!-- Подключаем стили для баннера триала -->
   <link rel="stylesheet" href="css/TrialBanner.css">
+  
+  <!-- Подключаем React для баннера триала -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
   <!-- Подключаем скрипт с баннером триала -->
   <script src="js/index.js" type="module"></script>

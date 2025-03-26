@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'https://esm.sh/react@18.2.0';
+// u0418u0441u043fu043eu043bu044cu0437u0443u0435u043c u0433u043bu043eu0431u0430u043bu044cu043du044bu0435 u043fu0435u0440u0435u043cu0435u043du043du044bu0435 React, u0437u0430u0433u0440u0443u0436u0435u043du043du044bu0435 u0447u0435u0440u0435u0437 CDN
+const React = window.React;
+const { useState, useEffect } = React;
 import { auth, checkTrialStatus } from '../firebase.js';
 
 const TrialBanner = () => {
@@ -91,7 +93,7 @@ const TrialBanner = () => {
         </div>
         <button 
           className="trial-banner-button"
-          onClick={() => window.location.href = '/catalog.html'}
+          onClick={() => window.location.href = 'catalog.html'}
         >
           u041fu0435u0440u0435u0439u0442u0438 u043a u0442u0435u0441u0442u0430u043c
         </button>
@@ -106,7 +108,7 @@ const TrialBanner = () => {
       <p>u0410u043au0442u0438u0432u0438u0440u0443u0439u0442u0435 u043fu043eu043bu043du044bu0439 u0434u043eu0441u0442u0443u043f u043a u0442u0440u0435u043du0430u0436u0451u0440u0443!</p>
       <button 
         className="trial-banner-button"
-        onClick={() => window.location.href = '/payment.html'}
+        onClick={() => window.location.href = 'payment.html'}
       >
         u041au0443u043fu0438u0442u044c u0434u043eu0441u0442u0443u043f u0437u0430 890 u0441u043eu043c
       </button>

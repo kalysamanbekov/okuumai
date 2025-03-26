@@ -1,5 +1,6 @@
-import React from 'https://esm.sh/react@18.2.0';
-import ReactDOM from 'https://esm.sh/react-dom@18.2.0';
+// u0418u0441u043fu043eu043bu044cu0437u0443u0435u043c u0433u043bu043eu0431u0430u043bu044cu043du044bu0435 u043fu0435u0440u0435u043cu0435u043du043du044bu0435 React u0438 ReactDOM, u0437u0430u0433u0440u0443u0436u0435u043du043du044bu0435 u0447u0435u0440u0435u0437 CDN
+const React = window.React;
+const ReactDOM = window.ReactDOM;
 import TrialBanner from './components/TrialBanner.js';
 import { auth, getGoogleRedirectResult } from './firebase.js';
 
@@ -19,12 +20,23 @@ const checkGoogleRedirect = async () => {
 const initTrialBanner = () => {
   const trialBannerContainer = document.getElementById('trial-banner-container');
   if (trialBannerContainer) {
-    ReactDOM.render(
-      <React.StrictMode>
-        <TrialBanner />
-      </React.StrictMode>,
-      trialBannerContainer
-    );
+    console.log('u0418u043du0438u0446u0438u0430u043bu0438u0437u0430u0446u0438u044f u0431u0430u043du043du0435u0440u0430 u0442u0440u0438u0430u043bu0430...');
+    try {
+      // u0418u0441u043fu043eu043bu044cu0437u0443u0435u043c u043au043bu0430u0441u0441u0438u0447u0435u0441u043au0438u0439 ReactDOM.render u0434u043bu044f u0441u043eu0432u043cu0435u0441u0442u0438u043cu043eu0441u0442u0438 u0441 u0438u043cu043fu043eu0440u0442u0438u0440u0443u0435u043cu044bu043cu0438 u0431u0438u0431u043bu0438u043eu0442u0435u043au0430u043cu0438
+      ReactDOM.render(
+        React.createElement(
+          React.StrictMode,
+          null,
+          React.createElement(TrialBanner, null)
+        ),
+        trialBannerContainer
+      );
+      console.log('u0411u0430u043du043du0435u0440 u0442u0440u0438u0430u043bu0430 u0443u0441u043fu0435u0448u043du043e u0438u043du0438u0446u0438u0430u043bu0438u0437u0438u0440u043eu0432u0430u043d');
+    } catch (error) {
+      console.error('u041eu0448u0438u0431u043au0430 u043fu0440u0438 u0438u043du0438u0446u0438u0430u043bu0438u0437u0430u0446u0438u0438 u0431u0430u043du043du0435u0440u0430 u0442u0440u0438u0430u043bu0430:', error);
+    }
+  } else {
+    console.error('u041au043eu043du0442u0435u0439u043du0435u0440 u0434u043bu044f u0431u0430u043du043du0435u0440u0430 u0442u0440u0438u0430u043bu0430 u043du0435 u043du0430u0439u0434u0435u043d');
   }
 };
 
@@ -39,8 +51,8 @@ const initAuth = () => {
       console.log('u041fu043eu043bu044cu0437u043eu0432u0430u0442u0435u043bu044c u043du0435 u0430u0432u0442u043eu0440u0438u0437u043eu0432u0430u043d');
       // u041fu0435u0440u0435u043du0430u043fu0440u0430u0432u043bu044fu0435u043c u043du0430 u0441u0442u0440u0430u043du0438u0446u0443 u0432u0445u043eu0434u0430, u0435u0441u043bu0438 u043cu044b u043du0435 u043du0430 u043du0435u0439
       const currentPath = window.location.pathname;
-      if (currentPath !== '/login.html' && currentPath !== '/register.html' && currentPath !== '/') {
-        window.location.href = '/login.html';
+      if (!currentPath.includes('login.html') && !currentPath.includes('register.html') && currentPath !== '/') {
+        window.location.href = 'login.html';
       }
     }
   });
