@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getChatCompletionStream } from '../services/openaiService';
+import { renderMarkdown } from '../utils/markdownConfig';
 import '../styles/StreamChat.css';
 
 const StreamChat = () => {
@@ -91,9 +92,10 @@ const StreamChat = () => {
               key={index} 
               className={`message ${message.role === 'assistant' ? 'assistant' : 'user'}`}
             >
-              <div className="message-content">
-                {message.content}
-              </div>
+              <div 
+                className="message-content markdown-content"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+              />
             </div>
           ))
         )}
@@ -101,7 +103,11 @@ const StreamChat = () => {
         {isTyping && (
           <div className="message assistant">
             <div className="message-content">
-              {currentResponse || <div className="typing-indicator"><span></span><span></span><span></span></div>}
+              {currentResponse ? (
+                <div dangerouslySetInnerHTML={{ __html: renderMarkdown(currentResponse) }} />
+              ) : (
+                <div className="typing-indicator"><span></span><span></span><span></span></div>
+              )}
             </div>
           </div>
         )}
