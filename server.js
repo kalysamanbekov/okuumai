@@ -176,6 +176,14 @@ app.all('/api/chat/stream', async (req, res) => {
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || '';
       if (content) {
+        console.log('Отправка фрагмента клиенту:', content);
+        
+        // Добавляем проверку на наличие Markdown-символов
+        const hasMarkdown = /[\*#\[\]_`>\-]/.test(content);
+        if (hasMarkdown) {
+          console.log('Обнаружены Markdown-символы в фрагменте:', content);
+        }
+        
         res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
         // Принудительная отправка данных клиенту
         res.flush();

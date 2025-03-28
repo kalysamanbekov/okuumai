@@ -14,6 +14,11 @@ const StreamChat = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, currentResponse]);
+  
+  // Отладочный вывод для проверки работы Markdown
+  useEffect(() => {
+    console.log('Текущий ответ:', currentResponse);
+  }, [currentResponse]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,6 +47,7 @@ const StreamChat = () => {
         messageList,
         // Обработка каждого фрагмента ответа
         (chunk) => {
+          // Добавляем новый фрагмент к текущему ответу
           setCurrentResponse(prev => prev + chunk);
         },
         // Обработка завершения потока
@@ -104,7 +110,10 @@ const StreamChat = () => {
           <div className="message assistant">
             <div className="message-content">
               {currentResponse ? (
-                <div dangerouslySetInnerHTML={{ __html: renderMarkdown(currentResponse) }} />
+                <div 
+                  className="markdown-content"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(currentResponse) }} 
+                />
               ) : (
                 <div className="typing-indicator"><span></span><span></span><span></span></div>
               )}
