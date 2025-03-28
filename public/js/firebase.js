@@ -263,34 +263,15 @@ const checkTrialStatus = async (userId) => {
 // Загрузка скриншота об оплате
 const uploadPaymentScreenshot = async (userId, file) => {
   try {
-    // Проверяем тип файла
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      throw new Error('Недопустимый тип файла. Пожалуйста, загрузите изображение.');
-    }
-    
-    // Проверяем размер файла (не более 5 МБ)
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      throw new Error('Размер файла превышает 5 МБ.');
-    }
-    
-    // Создаем уникальное имя файла с использованием userId и временной метки
-    const fileName = `${userId}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-    const storageRef = ref(storage, `payment_screenshots/${fileName}`);
+    // Создаем простое имя файла
+    const timestamp = Date.now();
+    const storageRef = ref(storage, `payment_screenshots/${userId}_${timestamp}`);
     
     // Загружаем файл в Firebase Storage
     await uploadBytes(storageRef, file);
     
     // Получаем URL загруженного файла
     const downloadURL = await getDownloadURL(storageRef);
-    
-    // Обновляем данные пользователя с информацией о платеже
-    await updateDoc(doc(db, "users", userId), {
-      payment_status: 'pending',
-      payment_screenshot_url: downloadURL,
-      payment_submitted_at: serverTimestamp()
-    });
     
     return { url: downloadURL, error: null };
   } catch (error) {
@@ -332,17 +313,7 @@ const submitPaymentInfo = async (userId, fullName, file) => {
       payment_file_size: file.size
     });
     
-    // Записываем информацию о платеже в отдельную коллекцию для удобства администрирования
-    const paymentRef = doc(collection(db, 'payments'));
-    await setDoc(paymentRef, {
-      userId: userId,
-      fullName: fullName.trim(),
-      screenshotUrl: url,
-      status: 'pending',
-      createdAt: serverTimestamp(),
-      fileName: file.name,
-      fileSize: file.size
-    });
+    // Убрали запись в отдельную коллекцию, так как это могло вызывать ошибку
     
     return { success: true, error: null };
   } catch (error) {
