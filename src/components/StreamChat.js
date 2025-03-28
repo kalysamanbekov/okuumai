@@ -36,7 +36,7 @@ const StreamChat = () => {
         content: msg.content
       }));
 
-      // Используем потоковую передачу через новый API
+      // Используем потоковую передачу через новый API с поддержкой GET-запросов
       await getChatCompletionStream(
         messageList,
         // Обработка каждого фрагмента ответа

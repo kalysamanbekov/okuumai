@@ -36,7 +36,7 @@ const userThreads = {};
 
 // Инициализация приложения Express
 const app = express();
-const PORT = process.env.PORT || 3009;
+const PORT = process.env.PORT || 3010;
 
 // Улучшенная настройка CORS
 app.use(cors({
@@ -45,7 +45,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With'],
   credentials: true,
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  exposedHeaders: ['Content-Type', 'Content-Length', 'Content-Encoding'] // Добавляем заголовки для SSE
 }));
 
 // Настраиваем дополнительные CORS-заголовки для всех ответов
@@ -53,6 +54,12 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Expose-Headers', 'Content-Type, Content-Length, Content-Encoding'); // Добавляем для SSE
+  
+  // Отключаем буферизацию для потоковых запросов
+  if (req.url.includes('/api/chat/stream')) {
+    res.flushHeaders();
+  }
   
   // Логирование запросов для отладки
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -69,14 +76,18 @@ app.use(express.json());
 // Обслуживание статических файлов из директории public
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Новый эндпоинт для потоковой передачи ответов от OpenAI API
-app.post('/api/chat/stream', async (req, res) => {
+// Новый эндпоинт для потоковой передачи ответов от OpenAI API (поддерживает POST и GET)
+app.all('/api/chat/stream', async (req, res) => {
   console.log('Получен запрос к /api/chat/stream');
   
   // Настраиваем заголовки для потоковой передачи
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Отключаем буферизацию для Nginx
+  
+  // Отключаем буферизацию ответа
+  res.flushHeaders();
   
   // Проверка наличия API ключа
   if (demoMode) {
@@ -98,21 +109,56 @@ app.post('/api/chat/stream', async (req, res) => {
     return res.end();
   }
 
-  // Проверка наличия сообщений в запросе
-  if (!req.body.messages || !Array.isArray(req.body.messages)) {
-    console.error('Ошибка в формате запроса');
-    res.write(`data: ${JSON.stringify({ error: 'Ошибка в формате запроса' })}\n\n`);
+  // Получаем данные из запроса (поддерживаем как POST, так и GET)
+  let messages = [];
+  
+  if (req.method === 'GET') {
+    // Получаем данные из URL-параметра 'data'
+    try {
+      if (req.query.data) {
+        const data = JSON.parse(req.query.data);
+        if (data.messages && Array.isArray(data.messages)) {
+          messages = data.messages;
+        } else {
+          throw new Error('Неверный формат данных');
+        }
+      } else {
+        throw new Error('Отсутствует параметр data');
+      }
+    } catch (error) {
+      console.error('Ошибка при обработке GET-параметров:', error.message);
+      res.write(`data: ${JSON.stringify({ error: `Ошибка в формате запроса: ${error.message}` })}\n\n`);
+      return res.end();
+    }
+  } else if (req.method === 'POST') {
+    // Получаем данные из тела POST-запроса
+    if (!req.body.messages || !Array.isArray(req.body.messages)) {
+      console.error('Ошибка в формате POST-запроса');
+      res.write(`data: ${JSON.stringify({ error: 'Ошибка в формате запроса' })}\n\n`);
+      return res.end();
+    }
+    messages = req.body.messages;
+  } else {
+    // Неподдерживаемый метод
+    res.write(`data: ${JSON.stringify({ error: `Метод ${req.method} не поддерживается` })}\n\n`);
+    return res.end();
+  }
+  
+  // Проверка наличия сообщений
+  if (!messages.length) {
+    console.error('Отсутствуют сообщения в запросе');
+    res.write(`data: ${JSON.stringify({ error: 'Отсутствуют сообщения в запросе' })}\n\n`);
     return res.end();
   }
   
   try {
     console.log('Подготовка потокового запроса к OpenAI API...');
     // Добавляем системное сообщение, если его нет
-    const messages = [...req.body.messages];
-    const hasSystemMessage = messages.some(msg => msg.role === 'system');
+    const processedMessages = [...messages];
+    const hasSystemMessage = processedMessages.some(msg => msg.role === 'system');
     
     if (!hasSystemMessage) {
-      messages.unshift({
+      processedMessages.unshift({
         role: 'system',
         content: 'Вы - полезный ассистент по образованию, который помогает учащимся готовиться к экзаменам ОРТ. Давайте точные и информативные ответы по учебным предметам.'
       });
@@ -121,7 +167,7 @@ app.post('/api/chat/stream', async (req, res) => {
     // Создаем поток от OpenAI API
     const stream = await openai.chat.completions.create({
       model: 'gpt-4o',
-      messages: messages,
+      messages: processedMessages,
       stream: true,
       temperature: 0.7,
     });
@@ -131,6 +177,8 @@ app.post('/api/chat/stream', async (req, res) => {
       const content = chunk.choices[0]?.delta?.content || '';
       if (content) {
         res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
+        // Принудительная отправка данных клиенту
+        res.flush();
       }
     }
     
@@ -214,11 +262,11 @@ app.post('/api/chat', async (req, res) => {
   try {
     console.log('Подготовка запроса к OpenAI API...');
     // Добавляем системное сообщение, если его нет
-    const messages = [...req.body.messages];
-    const hasSystemMessage = messages.some(msg => msg.role === 'system');
+    const processedMessages = [...messages];
+    const hasSystemMessage = processedMessages.some(msg => msg.role === 'system');
     
     if (!hasSystemMessage) {
-      messages.unshift({
+      processedMessages.unshift({
         role: 'system',
         content: 'Вы - полезный ассистент по образованию, который помогает учащимся готовиться к экзаменам ОРТ. Давайте точные и информативные ответы по учебным предметам.'
       });
