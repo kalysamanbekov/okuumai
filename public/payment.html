@@ -160,6 +160,11 @@
       border-color: var(--primary-color);
     }
     
+    .file-upload.drag-over {
+      border-color: var(--primary-color);
+      background-color: rgba(16, 163, 127, 0.05);
+    }
+    
     .file-upload-icon {
       font-size: 2rem;
       margin-bottom: 10px;
@@ -297,17 +302,30 @@
             submitBtn.disabled = true;
             submitBtn.textContent = 'Отправка...';
             
+            // Проверяем размер и тип файла еще раз перед отправкой
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            const maxSize = 5 * 1024 * 1024; // 5 МБ
+            
+            if (!allowedTypes.includes(file.type)) {
+              throw new Error('Пожалуйста, загрузите изображение (JPEG, PNG, GIF или WEBP).');
+            }
+            
+            if (file.size > maxSize) {
+              throw new Error('Размер файла не должен превышать 5 МБ.');
+            }
+            
             // Используем функцию submitPaymentInfo из firebase.js
             const { success, error } = await submitPaymentInfo(user.uid, fullName, file);
             
             if (!success) {
-              throw new Error(error || 'Ошибка при отправке данных');
+              throw new Error(error?.message || error || 'Ошибка при отправке данных');
             }
             
             // Показываем сообщение об успехе
             alertSuccess.style.display = 'block';
             paymentForm.reset();
             document.getElementById('file-name').textContent = '';
+            document.getElementById('image-preview').style.display = 'none';
           } catch (error) {
             console.error('Ошибка при отправке данных:', error);
             alertError.textContent = 'Произошла ошибка при отправке данных. Пожалуйста, попробуйте еще раз.';
@@ -326,17 +344,84 @@
       const fileInput = document.getElementById('payment-screenshot');
       const fileName = document.getElementById('file-name');
       
+      // Обработка клика по области загрузки
       fileUpload.addEventListener('click', () => {
         fileInput.click();
       });
       
+      // Обработка выбора файла
       fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) {
-          fileName.textContent = fileInput.files[0].name;
-        } else {
-          fileName.textContent = '';
+        handleFileSelect(fileInput.files);
+      });
+      
+      // Обработка drag-and-drop
+      fileUpload.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileUpload.classList.add('drag-over');
+      });
+      
+      fileUpload.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileUpload.classList.remove('drag-over');
+      });
+      
+      fileUpload.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileUpload.classList.remove('drag-over');
+        
+        const dt = e.dataTransfer;
+        if (dt.files.length) {
+          handleFileSelect(dt.files);
         }
       });
+      
+      // Функция для обработки выбранных файлов
+      function handleFileSelect(files) {
+        const alertError = document.getElementById('alert-error');
+        alertError.style.display = 'none';
+        
+        if (files.length > 0) {
+          const file = files[0];
+          
+          // Проверка типа файла (только изображения)
+          const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+          if (!allowedTypes.includes(file.type)) {
+            alertError.textContent = 'Пожалуйста, загрузите изображение (JPEG, PNG, GIF или WEBP).';
+            alertError.style.display = 'block';
+            fileInput.value = '';
+            fileName.textContent = '';
+            return;
+          }
+          
+          // Проверка размера файла (не более 5 МБ)
+          const maxSize = 5 * 1024 * 1024; // 5 МБ
+          if (file.size > maxSize) {
+            alertError.textContent = 'Размер файла не должен превышать 5 МБ.';
+            alertError.style.display = 'block';
+            fileInput.value = '';
+            fileName.textContent = '';
+            return;
+          }
+          
+          // Отображаем имя файла
+          fileName.textContent = file.name;
+          
+          // Предпросмотр изображения
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const previewImg = document.getElementById('image-preview');
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          fileName.textContent = '';
+          document.getElementById('image-preview').style.display = 'none';
+        }
+      }
     });
   </script>
   
@@ -368,12 +453,10 @@
         <div class="payment-details">
           <p><strong>Стоимость:</strong> 890 сом</p>
           <p><strong>Срок доступа:</strong> 30 дней</p>
-          <p><strong>Способ оплаты:</strong> Перевод на карту или электронный кошелек</p>
+          <p><strong>Способ оплаты:</strong> Перевод по номеру телефона</p>
           <p><strong>Реквизиты для оплаты:</strong></p>
           <ul style="margin-left: 20px;">
-            <li>ЭЛСОМ: +996 555 123456</li>
-            <li>О!Деньги: +996 700 123456</li>
-            <li>MBANK: 1234 5678 9012 3456</li>
+            <li>MBANK: +996 709 681 733</li>
           </ul>
           <p style="margin-top: 15px;"><strong>Важно:</strong> После оплаты сделайте скриншот подтверждения и загрузите его в форму ниже.</p>
         </div>
@@ -399,6 +482,7 @@
             <div id="file-upload" class="file-upload">
               <div class="file-upload-icon">📁</div>
               <div class="file-upload-text">Нажмите, чтобы выбрать файл или перетащите его сюда</div>
+              <img id="image-preview" style="display: none; max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 4px;" />
               <input type="file" id="payment-screenshot" class="file-upload-input" accept="image/*" required>
               <div id="file-name" class="file-name"></div>
             </div>

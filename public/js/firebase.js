@@ -1,7 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js';
 import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics.js';
-import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
+import { getFirestore, doc, collection, setDoc, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js';
 
 /*
@@ -263,8 +263,26 @@ const checkTrialStatus = async (userId) => {
 // Загрузка скриншота об оплате
 const uploadPaymentScreenshot = async (userId, file) => {
   try {
-    const storageRef = ref(storage, `payment_screenshots/${userId}_${Date.now()}`);
+    // Проверяем тип файла
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Недопустимый тип файла. Пожалуйста, загрузите изображение.');
+    }
+    
+    // Проверяем размер файла (не более 5 МБ)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error('Размер файла превышает 5 МБ.');
+    }
+    
+    // Создаем уникальное имя файла с использованием userId и временной метки
+    const fileName = `${userId}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+    const storageRef = ref(storage, `payment_screenshots/${fileName}`);
+    
+    // Загружаем файл в Firebase Storage
     await uploadBytes(storageRef, file);
+    
+    // Получаем URL загруженного файла
     const downloadURL = await getDownloadURL(storageRef);
     
     // Обновляем данные пользователя с информацией о платеже
@@ -277,13 +295,26 @@ const uploadPaymentScreenshot = async (userId, file) => {
     return { url: downloadURL, error: null };
   } catch (error) {
     console.error("Ошибка при загрузке скриншота:", error);
-    return { url: null, error };
+    return { url: null, error: error.message || 'Произошла ошибка при загрузке файла' };
   }
 };
 
 // Сохранение информации о платеже
 const submitPaymentInfo = async (userId, fullName, file) => {
   try {
+    // Проверяем входные данные
+    if (!userId) {
+      throw new Error('Идентификатор пользователя не указан');
+    }
+    
+    if (!fullName || fullName.trim().length < 3) {
+      throw new Error('Пожалуйста, укажите корректное ФИО (минимум 3 символа)');
+    }
+    
+    if (!file) {
+      throw new Error('Файл не выбран');
+    }
+    
     // Загружаем скриншот
     const { url, error } = await uploadPaymentScreenshot(userId, file);
     
@@ -293,16 +324,30 @@ const submitPaymentInfo = async (userId, fullName, file) => {
     
     // Обновляем данные пользователя
     await updateDoc(doc(db, "users", userId), {
-      payment_full_name: fullName,
+      payment_full_name: fullName.trim(),
       payment_status: 'pending',
       payment_screenshot_url: url,
-      payment_submitted_at: serverTimestamp()
+      payment_submitted_at: serverTimestamp(),
+      payment_file_name: file.name,
+      payment_file_size: file.size
+    });
+    
+    // Записываем информацию о платеже в отдельную коллекцию для удобства администрирования
+    const paymentRef = doc(collection(db, 'payments'));
+    await setDoc(paymentRef, {
+      userId: userId,
+      fullName: fullName.trim(),
+      screenshotUrl: url,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      fileName: file.name,
+      fileSize: file.size
     });
     
     return { success: true, error: null };
   } catch (error) {
     console.error("Ошибка при отправке информации о платеже:", error);
-    return { success: false, error };
+    return { success: false, error: error.message || 'Произошла ошибка при отправке данных' };
   }
 };
 
