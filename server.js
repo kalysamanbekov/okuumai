@@ -6,16 +6,21 @@ const { OpenAI } = require('openai');
 require('dotenv').config();
 
 // Проверяем наличие API-ключа
+let demoMode = false;
 if (!process.env.OPENAI_API_KEY) {
-  console.error('Ошибка: OPENAI_API_KEY не найден в переменных окружения');
-  console.error('Создайте файл .env в корневой директории с содержимым: OPENAI_API_KEY=ваш_ключ');
-  process.exit(1);
+  console.warn('Внимание: OPENAI_API_KEY не найден в переменных окружения');
+  console.warn('Запуск в демо-режиме с предопределенными ответами');
+  demoMode = true;
+  // Не завершаем процесс, продолжаем в демо-режиме
 }
 
-// Инициализация OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Инициализация OpenAI (если есть ключ API)
+let openai = null;
+if (!demoMode) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+}
 
 // Маппинг material_id к assistant_id
 const ASSISTANTS_MAP = {
@@ -31,7 +36,7 @@ const userThreads = {};
 
 // Инициализация приложения Express
 const app = express();
-const PORT = process.env.PORT || 3008;
+const PORT = process.env.PORT || 3009;
 
 // Улучшенная настройка CORS
 app.use(cors({
@@ -63,6 +68,81 @@ app.use(express.json());
 
 // Обслуживание статических файлов из директории public
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Новый эндпоинт для потоковой передачи ответов от OpenAI API
+app.post('/api/chat/stream', async (req, res) => {
+  console.log('Получен запрос к /api/chat/stream');
+  
+  // Настраиваем заголовки для потоковой передачи
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
+  // Проверка наличия API ключа
+  if (demoMode) {
+    console.warn('Запуск потокового API в демо-режиме');
+    // Отправляем имитацию потоковой передачи в демо-режиме
+    const demoResponse = 'Это демонстрационный ответ, имитирующий потоковую передачу данных от OpenAI API. '
+      + 'В реальном режиме вы будете видеть, как ответ появляется постепенно, символ за символом, '
+      + 'что создаст эффект общения с реальным человеком.';
+    
+    // Отправляем ответ по частям для имитации потоковой передачи
+    const words = demoResponse.split(' ');
+    
+    for (const word of words) {
+      res.write(`data: ${JSON.stringify({ chunk: word + ' ' })}\n\n`);
+      await new Promise(resolve => setTimeout(resolve, 100)); // Задержка для имитации
+    }
+    
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    return res.end();
+  }
+
+  // Проверка наличия сообщений в запросе
+  if (!req.body.messages || !Array.isArray(req.body.messages)) {
+    console.error('Ошибка в формате запроса');
+    res.write(`data: ${JSON.stringify({ error: 'Ошибка в формате запроса' })}\n\n`);
+    return res.end();
+  }
+  
+  try {
+    console.log('Подготовка потокового запроса к OpenAI API...');
+    // Добавляем системное сообщение, если его нет
+    const messages = [...req.body.messages];
+    const hasSystemMessage = messages.some(msg => msg.role === 'system');
+    
+    if (!hasSystemMessage) {
+      messages.unshift({
+        role: 'system',
+        content: 'Вы - полезный ассистент по образованию, который помогает учащимся готовиться к экзаменам ОРТ. Давайте точные и информативные ответы по учебным предметам.'
+      });
+    }
+    
+    // Создаем поток от OpenAI API
+    const stream = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: messages,
+      stream: true,
+      temperature: 0.7,
+    });
+    
+    // Обрабатываем поток данных и отправляем клиенту
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
+      }
+    }
+    
+    // Сигнализируем о завершении потока
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
+  } catch (error) {
+    console.error('Ошибка OpenAI API при потоковой передаче:', error.message);
+    res.write(`data: ${JSON.stringify({ error: `Ошибка OpenAI API: ${error.message}` })}\n\n`);
+    res.end();
+  }
+});
 
 // Тестовый маршрут для проверки работы сервера
 app.get('/api/status', (req, res) => {
